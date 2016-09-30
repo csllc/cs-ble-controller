@@ -1,0 +1,20 @@
+{
+  "name": "cs-ble-controller",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Bill Glase <bglase@controls.com> (http://wwww.controls.com/)",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.4.6",
+    "noble": "^1.7.0",
+    "underscore": "^1.8.3"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.1.0"
+  }
+}
