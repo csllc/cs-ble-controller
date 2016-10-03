@@ -28,12 +28,15 @@ before(function( done ) {
 
   // Wait for the bluetooth hardware to become ready
 	ble.once('stateChange', function(state) {
-    console.log( state );
-    if(state === 'poweredOn') {
+
+    if(state === 'poweredOff') {
+      done( new Error( 'Bluetooth must be powered on before you run this test')) ;
+
+    }
+    else if(state === 'poweredOn') {
 
 
       ble.once('discover', function( peripheral ) {
-        
 
         ble.stopScanning();
 
@@ -42,11 +45,12 @@ before(function( done ) {
         device.connect()
         .then( function() { return device.enableUart(); } )
         .then( function() {
-          console.log( 'initialized' );
           done();
         })
         .catch( function( err ) { 
-          done( err ); 
+          console.log( 'before err: ', err );
+
+          done( new Error(err)  ); 
         });
       });
 
@@ -84,13 +88,13 @@ describe('Send Data', function() {
     buf.fill( 0x30 );
 
     device.on('data', function( data ) {
-      console.log( 'Received ' + data.length + ': ', data );
+      console.log( 'Received ' , data );
     });
 
     device.sendUart( buf )
-    .then( function() { return Promise.delay(15000); })
-    .then( function() { return device.readUart(); })
-    .then( function(data) { console.log( 'DATA: ', data ); })
+    .delay( 15000 )
+    //.then( function() { return device.readUart(); })
+    //.then( function(data) { console.log( 'DATA: ', data ); })
     .then( function() {
 
       //setTimeout( function() {  done(); }, 15000 );
@@ -98,6 +102,7 @@ describe('Send Data', function() {
      
     })
     .catch( function( err ) {
+      console.log( 'caught: ', err );
       throw( new Error(err) );
     });
 

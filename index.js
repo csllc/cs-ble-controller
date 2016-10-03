@@ -34,13 +34,18 @@ function BleControllerFactory() {
   EventEmitter.call( this );
 
   // Pass on BLE state change events 
-  ble.on('stateChange', this.emit.bind(this, 'stateChange'));
+  ble.on('stateChange', this.emit.bind(factory, 'stateChange'));
 
-  ble.on('discover', this.emit.bind(this, 'discover'));
+/*
+  ble.on('stateChange', function(state) {
+    console.log( state );
+    factory.emit( 'stateChange');
+  });
+*/
+  ble.on('discover', this.emit.bind(factory, 'discover'));
 
   this.startScanning = function() {
 
-    //console.log( Controller.uuidUartService );
     // the Adafruit BLE friend advertises the UART service in its 
     // advertising packets (probably possible to reconfigure).  For
     // now, scan for the uart service

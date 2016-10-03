@@ -28,9 +28,18 @@ before(function( done ) {
   
   // Wait for the bluetooth hardware to become ready
 	ble.once('stateChange', function(state) {
-    if(state === 'poweredOn') {
+
+    if(state === 'poweredOff') {
+      done( new Error( 'Bluetooth must be powered on before you run this test')) ;
+
+    }
+    else if(state === 'poweredOn') {
       
+      // then wait for a matching device to be discovered
       ble.once('discover', function( peripheral ) {
+
+        // got one, we are done. Save the discovered peripheral for
+        // use in the test(s)
         ble.stopScanning();
 
         thePeripheral = peripheral;
@@ -39,6 +48,8 @@ before(function( done ) {
 
       });
 
+      // after we power on, start scanning for devices
+      ble.startScanning();
     }
 
   });

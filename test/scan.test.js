@@ -21,7 +21,12 @@ before(function( done ) {
 
   // Wait for the bluetooth hardware to become ready
 	ble.once('stateChange', function(state) {
-    if(state === 'poweredOn') {
+
+    if(state === 'poweredOff') {
+      done( new Error( 'Bluetooth must be powered on before you run this test')) ;
+
+    }
+    else if(state === 'poweredOn') {
       done();
     }
 
@@ -47,7 +52,7 @@ afterEach(function( done ) {
 describe('Scan for devices', function() {
 
   // time to find a device depends on, for example, the advertising intervals
-  this.timeout(10000);
+  this.timeout(20000);
 
   it.skip('should find a device', function(done) {
 
