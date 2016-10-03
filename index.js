@@ -35,15 +35,11 @@ function BleControllerFactory() {
 
   // Pass on BLE state change events 
   ble.on('stateChange', this.emit.bind(factory, 'stateChange'));
-
-/*
-  ble.on('stateChange', function(state) {
-    console.log( state );
-    factory.emit( 'stateChange');
-  });
-*/
+  ble.on('scanStart', this.emit.bind(factory, 'scanStart'));
+  ble.on('scanStop', this.emit.bind(factory, 'scanStop'));
   ble.on('discover', this.emit.bind(factory, 'discover'));
 
+  // API to start the bluetooth scanning
   this.startScanning = function() {
 
     // the Adafruit BLE friend advertises the UART service in its 
