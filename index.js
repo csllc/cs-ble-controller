@@ -18,10 +18,8 @@ var util = require('util');
 // Node event emitter module
 var EventEmitter = require('events').EventEmitter;
 
-//var Promise = require('bluebird');
-
-// For the Nordic/Adafruit BLE Friend UART service
-var uuidUartService = '6e400001b5a3f393e0a9e50e24dcca9e';
+// For the private CSLLC controller service
+var uuidControllerService = '6765ed1f4de149e14771a14380c90000';
 
 
 //------------------------------------//---------------------------------------
@@ -33,19 +31,21 @@ function BleControllerFactory() {
   // subclass to event emitter
   EventEmitter.call( this );
 
-  // Pass on BLE state change events 
+  // Pass on BLE state change events (noble library events passed
+  // through to our event listeners)
   ble.on('stateChange', this.emit.bind(factory, 'stateChange'));
   ble.on('scanStart', this.emit.bind(factory, 'scanStart'));
   ble.on('scanStop', this.emit.bind(factory, 'scanStop'));
   ble.on('discover', this.emit.bind(factory, 'discover'));
+  ble.on('warning', this.emit.bind(factory, 'warning'));
 
   // API to start the bluetooth scanning
   this.startScanning = function() {
 
-    // the Adafruit BLE friend advertises the UART service in its 
-    // advertising packets (probably possible to reconfigure).  For
-    // now, scan for the uart service
-    ble.startScanning([ uuidUartService ], false);
+    // Scan for devices with the service we care about
+    // This does not connect; just emits a discover event
+    // when one is detected 
+    ble.startScanning([uuidControllerService], false);
 
   };
 
