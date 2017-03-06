@@ -10,9 +10,6 @@ var ble = require('..');
 
 var expect = require('chai').expect;
 
-// Include the memory map for product identification
-var map = require('../lib/maps/ident.js');
-
 var thePeripheral = null;
 
 /**
@@ -77,7 +74,7 @@ describe('Scan for devices', function() {
   it('should find a device', function(done) {
 
     // time to find a device depends on, for example, the advertising intervals
-  this.timeout(10000);
+    this.timeout(10000);
 
     ble.on('discover', function( peripheral ) {
       ble.stopScanning();

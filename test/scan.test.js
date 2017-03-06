@@ -54,7 +54,7 @@ describe('Scan for devices', function() {
   // time to find a device depends on, for example, the advertising intervals
   this.timeout(20000);
 
-  it.skip('should find a device', function(done) {
+  it('should find a device', function(done) {
 
     // time to find a device depends on, for example, the advertising intervals
     this.timeout = 10000;
@@ -86,6 +86,17 @@ describe('Scan for devices', function() {
       .then( function() {
 
         expect( device.deviceType ).to.not.equal( null );
+        expect( device.deviceType ).to.be.a( 'string' );
+        expect( device.deviceType ).to.have.length.above( 0 );
+
+        expect( device.serial ).to.not.equal( null );
+        expect( device.serial ).to.be.a( 'string' );
+        expect( device.serial ).to.have.length.above( 0 );
+
+        expect( device.fault ).to.not.equal( null );
+        expect( device.fault ).to.be.an.instanceof( Buffer );
+        expect( device.fault ).to.have.length.above(0);
+
         done();
       })
       .catch( function( err ) { 

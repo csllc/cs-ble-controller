@@ -1,45 +1,10 @@
 /**
- * Scan for all controllers, connect to them, and watch them like a telematics application might
+ * Scan for all controllers, connect to them, and watch for events
  *
  */
 'use strict';
 
 var ble = require('..');
-
-
-/**
- * Polls the specified device forever
- *
- * The device parameter should be a controller object that is already
- * connected.
- *  
- * @param  {[type]} device BLE Controller Object
- */
-function pollDevice( device ) {
-
-  // Read the whole memory map
-  device.readMap( device.map )
-  .then( function( result)  {
-    
-    //console.log( 'Poll Result: ', result );
-
-  })
-  .then( function() {
-    setImmediate( function() { pollDevice( device ); });
-    //setTimeout( function() { pollDevice( device ); }, 10000);
-  })
-  .catch( function(err) {
-
-    console.error( 'Poll Error: ', err );
-
-    // Keep polling but put in a little delay
-    setTimeout( function() { pollDevice(device );}, 1000 );
-
-  });
-}
-
-
-
 
 // Wait for the bluetooth hardware to become ready
 ble.once('stateChange', function(state) {
@@ -59,16 +24,18 @@ ble.once('stateChange', function(state) {
       // Create an object to manage the discovered peripheral
       var device = new ble.Controller( peripheral );
 
-      console.log( 'Found ' + peripheral.advertisement.localName );
+      var name = peripheral.advertisement.localName;
+
+      console.log( 'Found ' + name );
 
       // Capture the event emitted when the device connects
       device.on('connect', function(){
-        console.log( 'Connected');
+        console.log( name + ': ' + 'Connected');
       });
 
       // Capture the event emitted when the device disconnects
       device.on('disconnect', function(){
-        console.log( 'Disconnected');
+        console.log( name + ': ' + 'Disconnected');
 
         // Go back to looking for a device
         ble.startScanning();
@@ -79,13 +46,34 @@ ble.once('stateChange', function(state) {
 
         console.log( 'Connected to ' + device.deviceType + ' ' + device.serial );
 
-        device.on( 'position', function watchPosition( position ) {
-          console.log( position );
+        device.on( 'position', function( position ) {
+          console.log( name + ': Position: ', position );
         });
 
-        return device.watchPosition();
+        device.on( 'fault', function( fault ) {
+          console.log(  name + ': ' + 'Fault: ', fault );
+        });
 
-        //pollDevice( device );
+        device.on( 'status', function( status ) {
+          console.log( name + ': ' + 'Status: ', status );
+        });
+
+        device.on( 'status2', function( status ) {
+          console.log( name + ': ' + 'Status2: ', status );
+        });
+
+        device.on( 'status3', function( status ) {
+          console.log( name + ': ' + 'Status3: ', status );
+        });
+
+        device.on( 'status4', function( status ) {
+          console.log( name + ': ' + 'Status4: ', status );
+        });
+
+        device.on( 'status5', function( status ) {
+          console.log( name + ': ' + 'Status5: ', status );
+        });
+
       })
       
       .catch( function( err ) { 
