@@ -6,7 +6,9 @@
 'use strict';
 
 // Load the object that handles communication to the device
-var ble = require('..');
+var BleControllerFactory = require('..');
+var ble = new BleControllerFactory();
+
 
 var expect = require('chai').expect;
 
@@ -21,17 +23,17 @@ var thePeripheral = null;
  */
 before(function( done ) {
 
-  this.timeout(10000);
+  this.timeout(20000);
   
   // Wait for the bluetooth hardware to become ready
-	ble.once('stateChange', function(state) {
+	ble.on('stateChange', function(state) {
 
     if(state === 'poweredOff') {
       done( new Error( 'Bluetooth must be powered on before you run this test')) ;
 
     }
     else if(state === 'poweredOn') {
-      
+
       // then wait for a matching device to be discovered
       ble.once('discover', function( peripheral ) {
 

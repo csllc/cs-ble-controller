@@ -1,8 +1,8 @@
 /**
- * Library module for Bluetooth Low Energy interface to Control Solutions Controllers
+ * Library module for Bluetooth Low Energy interface to CS1814 type BLE interfaces
  *
  * This is a client library that handles finding, connecting to, and interacting with
- * Control Solutions controllers that support the proprietary 'Controller' BLE service.
+ * Control Solutions CS1814 dongles that support the proprietary 'Controller' BLE service.
  *
  * @ignore
  */
@@ -33,6 +33,7 @@ function BleControllerFactory() {
 
   // Pass on BLE state change events (noble library events passed
   // through to our event listeners)
+
   ble.on('stateChange', this.emit.bind(factory, 'stateChange'));
   ble.on('scanStart', this.emit.bind(factory, 'scanStart'));
   ble.on('scanStop', this.emit.bind(factory, 'scanStop'));
@@ -75,4 +76,4 @@ util.inherits( BleControllerFactory, EventEmitter );
  *
  * @ignore
  */
-module.exports = new BleControllerFactory();
+module.exports = BleControllerFactory;

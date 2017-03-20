@@ -6,7 +6,8 @@
 'use strict';
 
 // Load the object that handles communication to the device
-var ble = require('..');
+var BleControllerFactory = require('..');
+var ble = new BleControllerFactory();
 
 var expect = require('chai').expect;
 
@@ -18,6 +19,9 @@ var expect = require('chai').expect;
  *
  */
 before(function( done ) {
+
+  // allow time for scan and connect
+  this.timeout(20000);
 
   // Wait for the bluetooth hardware to become ready
 	ble.once('stateChange', function(state) {
@@ -59,6 +63,8 @@ describe('Scan for devices', function() {
     // time to find a device depends on, for example, the advertising intervals
     this.timeout = 10000;
 
+    console.log( 'Searching for BLE device...');
+            
     ble.once('discover', function( peripheral ) {
       ble.stopScanning();
 

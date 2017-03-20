@@ -6,7 +6,8 @@
 'use strict';
 
 // Load the object that handles communication to the device
-var ble = require('..');
+var BleControllerFactory = require('..');
+var ble = new BleControllerFactory();
 
 var Buffers = require( 'h5.buffers');
 
@@ -40,7 +41,8 @@ before(function( done ) {
     }
     else if(state === 'poweredOn') {
 
-
+      console.log( 'Searching for BLE device...');
+            
       ble.once('discover', function( peripheral ) {
 
         ble.stopScanning();

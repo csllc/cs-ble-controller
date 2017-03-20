@@ -4,7 +4,8 @@
  */
 'use strict';
 
-var ble = require('..');
+var BleControllerFactory = require('..');
+var ble = new BleControllerFactory();
 
 
 /**
