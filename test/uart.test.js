@@ -87,6 +87,39 @@ describe('MBAP Data', function() {
 
   this.timeout(2000);
 
+  // send data to the BLE peripheral using the loopback feature.  We should
+  // get the same data back
+  function sendLoopback( id, len, cb ) {
+
+    var buf = new Buffers.BufferBuilder();
+
+    buf.pushUInt16( id, false );      // transaction id
+    buf.pushUInt16( 0xFFFF ); // protocol
+    buf.pushUInt16( len );      //length
+  
+    // fill buffer less the unit/function code already 
+    var packet = new Buffer( len );
+    packet.fill( 0xCA );
+
+    buf.pushBuffer( packet );
+
+    // spy on the data events to capture the data as it arrives
+    var spy = sinon.spy();
+    device.on('data', spy );
+
+    device.write( buf.toBuffer() );
+
+    setTimeout( function() {
+
+      // remove the event spy
+      device.removeListener( 'data', spy );
+
+      cb( spy );
+
+    }, 2000 );
+
+  }
+
   it('Minimum length loopback', function(done) {
 
     var buf = new Buffers.BufferBuilder();
@@ -127,81 +160,46 @@ describe('MBAP Data', function() {
     // length of payload; experimentally determined & may change depending
     // on buffering in the peripheral
 
-    var len = 115;
+    this.timeout(10000);
 
-    var buf = new Buffers.BufferBuilder();
+    sendLoopback( 1, 249, function( spy ) {
 
-    buf.pushUInt16( 1 );      // transaction id
-    buf.pushUInt16( 0xFFFF ); // protocol
-    buf.pushUInt16( len );      //length
-    buf.pushUInt8( 1 );      // unit
-    buf.pushUInt8( 0x11 );   // function code
-
-    var packet = new Buffer( len );
-    packet.fill( 0xCA );
-
-    buf.pushBuffer( packet );
-
-    device.once('data', function( data ) {
-      //console.log( 'Received ' + data.length, data );
-
-      expect( data ).to.be.an.instanceof( Buffer );
-      expect( data.length ).to.equal( len+6 );
-
-      var reader = new Buffers.BufferReader( data );
-
-      // should get back exactly the same data
-      expect( reader.shiftUInt16() ).to.equal( 1 );
-      expect( reader.shiftUInt16() ).to.equal( 0xFFFF );
-      expect( reader.shiftUInt16() ).to.equal( len );
-
-      //expect( reader.shiftUInt8() ).to.equal( 1 );
-      //expect( reader.shiftUInt8() ).to.equal( 0x11 );
+      expect( spy.callCount ).to.be.above( 0 );
 
       done();
+
     });
+  });
 
-    device.write( buf.toBuffer() );
 
+  it('More than Maximum length loopback', function(done) {
+
+ 
+    this.timeout(10000);
+
+    sendLoopback( 1, 251, function( spy ) {
+
+      expect( spy.callCount ).to.equal( 0 );
+
+      done();
+
+    });
 
   });
 
+
   it('Medium length loopback', function(done) {
 
-    var len = 50;
+ 
+    this.timeout(10000);
 
-    var buf = new Buffers.BufferBuilder();
+    sendLoopback( 3, 50, function( spy ) {
 
-    buf.pushUInt16( 1 );      // transaction id
-    buf.pushUInt16( 0xFFFF ); // protocol
-    buf.pushUInt16( len );      //length
-
-    // fill buffer less the unit/function code already 
-    var packet = new Buffer( len );
-    packet.fill( 0xCA );
-
-    buf.pushBuffer( packet );
-
-    device.once('data', function( data ) {
-      console.log( 'Received ' + data.length, data );
-
-      expect( data ).to.be.an.instanceof( Buffer );
-      expect( data.length ).to.equal( len+6 );
-
-      var reader = new Buffers.BufferReader( data );
-
-      // should get back exactly the same data
-      expect( reader.shiftUInt16() ).to.equal( 1 );
-      expect( reader.shiftUInt16() ).to.equal( 0xFFFF );
-      expect( reader.shiftUInt16() ).to.equal( len );
-
-      //expect( reader.shiftUInt8() ).to.equal( 1 );
-      //expect( reader.shiftUInt8() ).to.equal( 0x11 );
+      expect( spy.callCount ).to.be.above( 0 );
 
       done();
-    });
 
-    device.write( buf.toBuffer() );
+    });
 
 
   });
@@ -269,9 +267,11 @@ describe('MBAP Data', function() {
     // how many messages to send
     var numMessages = 100;
 
-    // length of payload; experimentally determined & may change depending
-    // on buffering in the peripheral
-    var len = 115;
+    // length of payload; note on response the BLE splits up the data into
+    // chunks (right now 100 bytes) so choosing a packet size smaller than 
+    // one chunk means the number of chunks received should equal the number
+    // of packets sent
+    var len = 94;
 
     var spy = sinon.spy();
 

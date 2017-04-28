@@ -1,6 +1,6 @@
-# cs-ble-controller
+# cs-mb-ble
 
-NodeJS module that interfaces with Control Solutions LLC CS1814 BLE interfaces.
+NodeJS module that interfaces with Control Solutions LLC CS1814 BLE interfaces, and provides a connection interface for the cs-modbus module
 
 ## CS1814 Bluetooth Low Energy description
 
