@@ -8,7 +8,18 @@
  */
 'use strict';
 
-var ble = require('noble');
+// The noble library throws an exception if there is no compatible bluetooth adapter found.
+// this is a workaround as suggested by https://github.com/sandeepmistry/noble/issues/570
+var ble;
+try { 
+  ble = require('noble'); 
+} 
+catch(err) 
+{ 
+  ble = { 
+    on: (function() {})
+  };
+}
 
 var Controller = require( './lib/Controller');
 
@@ -54,6 +65,13 @@ function BleControllerFactory() {
     ble.stopScanning();
   };
 
+  // returns true if there is a bluetooth adapter installed.  Probably
+  // a better way is to assume not until the 'stateChange' event is emitted,
+  // but this is an easy way to see if the noble library threw an exception
+  // on startup.
+  this.installed = function() {
+    return 'function' === typeof( ble.startScanning );
+  };
 
   // Make constructor available in the exported object
   factory.Controller = Controller;
