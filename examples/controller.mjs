@@ -7,20 +7,20 @@
 // @abandonware/noble directly.
 
 // CS Modbus library
-const Modbus = require('@csllc/cs-modbus');
+import * as Modbus from '@csllc/cs-modbus';
 
-const PromisePool = require("async-promise-pool");
+import PromisePool from 'async-promise-pool';
 
 // For pretty printing
-const chalk = require('chalk');
+import chalk from 'chalk';
 const error = chalk.bold.red;
 const label = chalk.blue;
 
 // Our BLE library
-const BleController = require('..');
+import  BleController from '../index.js';
 
 // Motor controller library
-const Controller = require('./lib/controller');
+import Controller from './lib/controller.js';
 
 // ID of motor controller
 const CONTROLLER_ID = 0x01;
