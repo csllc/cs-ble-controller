@@ -1,37 +1,140 @@
 # cs-mb-ble
 
-NodeJS module that interfaces with Control Solutions LLC CS1814 BLE interfaces, and provides a connection interface for the cs-modbus module
+NodeJS module that interfaces with Control Solutions LLC Bluetooth dongles, and provides a connection interface for the `@csllc/cs-modbus` module.
+
+## Version 2.0 Breaking Changes
+
+To extend this module's compatibility to include Electron GUI apps, the dependency on `@abandonware/noble` in version 1.0.x has been replaced with `webbluetooth`. Breaking changes stemming from this include: 
+
+- Events forwarded from the native BLE module have changed. See Events Emitted, below.
+- The `startScanning()` method now handles device selection in addition to scanning
+- The `startScanning()` method returns a `Promise` that waits for a callback to be called. This callback is sent in a `discover` event emitted by the `webbluetooth` instance. The `Promise` will resolve to a `BluetoothDevivce`, which is also stored as `this.peripheral`.
+- The `name` or `uuid` options passed to the constructor must be set. `default` is an acceptable UUID.
+- The `stopScanning()` method has been removed
+- The `warning` event from Noble is no longer emitted
+- New BLE devices must have corresponding files added to the `lib/device/` directory, and `lib/BleDevice.js` must be updated to import and use them in the appropriate places.
+- The `installed` property has been replaced by the `getAvailability()` method, which returns a Promise that resolves to a Boolean.
+- The `deviceType` property of the `BleDevice` instance has been renamed to `product` for simpler underlying code.
+
+## Usage
+
+See the files in the `examples` directory for working examples of how to use this module.
+
+### Constructor options
+
+- `uuid` - (required) GATT service UUID to use in peripheral scan filter.
+- `name` - (optional) Device name to use in peripheral scan filter.
+- `bluetooth` - (optional) Instance of `navigator.bluetooth` to use instead of creating our own instance of `webbluetooth.Bluetooth`.
+- `autoConnect` - (optional) Automatically connect to the first device found while scanning. *Default value: false*
+
+#### Web Bluetooth compatibility
+
+A `navigator.bluetooth` object (e.g., provided by Electron) can be passed as an option for the constructor. If this is done, this module will not create its own `webbluetooth` instance.
+
+### Watchers
+
+Watchers are characteristics (`statusN`) that are associated with a specific memory location on the connected device, e.g., the motor controller.
+
+Support for watchers varies by BLE dongle and firmware revision. Typically there are at least 5 watchers supporting read lengths of 0 to 4 contiguous bytes. When these memory locations change, the provided callback function is called with the new value of the memory.
+
+Some dongles also support a 'super-watcher', which is comprised of several single-byte members. When any of the watched memory locations change, the provided callback function is called with the address of the changed memory and the new value.
+
+### Methods
+
+#### Management
+
+- `startScanning()` - Using the filter parameters supplied to the constructor, start scanning for devices. The returned `Promise` will resolve when the callback passed in the `discover` event is called with a device ID.
+- `getAvailability()` - Get the system's BLE availability as a `Promise` that resolves to a `Boolean`
+- `isOpen()` - Get the status of the BLE module. Return a truthy value if the peripheral is connected, there's a `BleDevice` instance, and the module has been flagged as ready.
+
+#### Connectivity
+
+- `open()` - Open the peripheral that was requested and found in `startScanning()`
+- `close()` - Close the open connection to a peripheral
+- `getInfo()` - Get identity information about the connected peripheral as a `Promise` that resolves to an `Object`
+
+#### Communication
+
+- `write()` - Write data to the transparent UART, i.e., to the Modbus interface.
+
+#### Configuration
+
+- `configure()` - Configure the BLE peripheral. Not implemented yet. Returns a `Promise`.
+- `keyswitch(state)` - Set the keyswitch state, a boolean. Returns a `Promise` that resolves when the command is complete.
+- `watch(slot, id, address, length, cb)` - Sets a watcher using the specified slot, device ID, device memory address, memory read length, and callback function. Returns a `Promise` that resolves when the command is complete.
+- `superWatch(id, address, cb)` - Sets the super-watcher using the specified device ID, array of device memory addresses, and callback function. Returns a `Promise` that resolves when the command is complete.
+- `unwatch(slot)` - Clears a watcher at the specified slot. The super-watcher's slot may be used.
+- `unwatchAll()` - Clears all watchers and super-watcher.
+- `getWatchers()` - Returns a `Promise` that resolves to an array of objects, each corresponding to an active watcher.
+- `getSuperWatcher()` - Returns a `Promise` that resolves to an array of objects, each corresponding to an active member of the super-watcher.
+
+### Events emitted
+
+Currently, events for watcher updates are not forwarded from the BleDevice instance, since callback functions have been sufficient for use-cases so far. It may make sense to add this in a future version.
+
+#### Originating from @csllc/cs-mb-ble
+
+- `scanStart` - Emitted when device scanning starts
+- `scanStop` - Emitted when a device scanning stops because a peripheral was selected
+- `discover` - Emitted during scanning as new peripherals are discovered. A callback function to select a peripheral by ID is included in the event data.
+- `connecting` - Emitted when the BLE connection to the selected peripheral is attempted.
+- `connected` - Emitted when the BLE connection to the selected peripheral is established.
+  This is not the same as being ready to use the controller, as it occurs before the peripheral is interrogated and validated.  Use the `ready` event or the resolution of the `open()` promise to determine when the BLE dongle is ready to communicate with the connected controller.
+- `ready` - Emitted when the BLE peripheral is ready to communicate with the device it is connected to.
+- `disconnecting` - Emitted when disconnecting from the BLE peripheral is requested.
+- `disconnected` - Emitted when the BLE connection to the peripheral has finished disconnecting. This object can be deleted afterwards.
+
+### Forwarded from the `BleDevice` instance
+
+- `inspecting` - Peripheral inspection started
+- `inspected` - Peripheral inspection complete; information is available via the `getInfo()` method
+- `write` - Data written to transparent UART
+- `data` - Data received from transparent UART
+- `fault` - Connected device fault status changed
+- `writeCharacteristic` - Any peripheral characteristic written
+- `sendCommand` - Will send command to peripheral
+- `watch` - A watcher has been set up
+- `superWatch` - The super-watcher has been set up
+- `unwatch` - A watcher has been cleared
+- `unwatchAll` - All watchers have been cleared
+
+### Forwarded from the `bluetooth` instance
+
+- `availabilitychanged` - Fired when the Bluetooth system as a whole becomes available or unavailable
+- `gattserverdisconnected` - Fired when an active BLE connection is lost.
 
 ## CS1814 Bluetooth Low Energy description
 
-The CS1814 acts as a Bluetooth LE peripheral, which exposes one or more
-of the following services:
+The CS1814 and CS1816 dongles act as Bluetooth LE peripherals, which exposes one or more of the following services:
 
 ### Controller Service
-uuid: `6765ed1f4de149e14771a14380c90000`
+
+UUID `6765ed1f-4de1-49e1-4771-a14380c90000`
+
 The Controller Service exposes characteristics related to a device, which may be monitored by the central device.  The interpretation of some characteristics is product-specific.
 
 Characteristics:
-* Product (uuid `6765ed1f4de149e14771a14380c90003`, (Read)) which contains a string identifying the product type.  This product type is a primary means of determining how the rest of the characteristics and commands are to be interpreted.
+* Product (UUID `6765ed1f-4de1-49e1-4771-a14380c90003`, (Read)) which contains a string identifying the product type.  This product type is a primary means of determining how the rest of the characteristics and commands are to be interpreted.
 
-* Serial (uuid `6765ed1f4de149e14771a14380c90004`, (Read)) which contains a string identifying the product. 
+* Serial (UUID `6765ed1f-4de1-49e1-4771-a14380c90004`, (Read)) which contains a string identifying the product. 
 
-* Fault (uuid `6765ed1f4de149e14771a14380c90005`, (Read, Notify)).  Contains the device's fault information (interpreted according to the Product's user guide).  The central device may subscribe to this characteristic to receive updates when the fault status changes.
+* Fault (UUID `6765ed1f-4de1-49e1-4771-a14380c90005`, (Read, Notify)).  Contains the device's fault information (interpreted according to the Product's user guide).  The central device may subscribe to this characteristic to receive updates when the fault status changes.
 
-* Status1-5 (uuid `6765ed1f4de149e14771a14380c90006` to `6765ed1f4de149e14771a14380c9000a`, (Read, Notify)).  Contains the device's status information (interpreted according to the Product's user guide).  The central device may subscribe to these characteristics to receive updates when status changes.
+* Status1-n (UUID `6765ed1f-4de1-49e1-4771-a14380c90006` to `6765ed1f-4de1-49e1-4771-a14380c900nn`, (Read, Notify)).  Contains the device's status information (interpreted according to the Product's user guide).  The central device may subscribe to these characteristics to receive updates when status changes.
 
 
-### Command Service
-uuid: `49535343fe7d4ae58fa99fafd205e455`
+### Transparent UART Service
+
+UUID `49535343-fe7d-4ae5-8fa9-9fafd205e455`
 
 The Command Service allows the central device to send commands to the peripheral device and receive responses.
 
 Characteristics:
-* Send (uuid `49535343884143f4a8d4ecbe34729bb3`, (Write)) 
+* Transmit (UUID `49535343-1e4d-4bd9-ba61-23c647249616`, (Write)) 
 
-* Receive (uuid `495353431e4d4bd9ba6123c647249616`, (Notify)) 
+* Receive (UUID `49535343-8841-43f4-a8d4-ecbe34729bb3`, (Notify)) 
 
-To send a command to the device, the Send characteristic is written with a header followed by a number of payload bytes.  The header consists of 6 bytes:
+To send a command to the device, the Transmit characteristic is written with a header followed by a number of payload bytes.  The header consists of 6 bytes:
 
 Byte 0:	 transactionId (MSB)
 Byte 1:  transactionId (LSB)
@@ -54,3 +157,13 @@ The maximum delay to process a command varies by the type of peripheral; consult
 
 The peripheral accepts at least two commands at a time, which are processed in order.  Sending more than two commands without waiting for a response may result in the extra commands being silently ignored by the peripheral.
 
+
+## Development
+
+### Unit Tests
+
+Several unit tests are available for this module. To execute them, run:
+
+`npx mocha`
+
+Not every test will pass for every dongle or configuration. Some known issues are documented in the comments of the `.test.js` files.

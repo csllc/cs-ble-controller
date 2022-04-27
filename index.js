@@ -1,97 +1,458 @@
 /**
- * Library module for Bluetooth Low Energy interface to CS1814 type BLE interfaces
+ * Library module for Bluetooth Low Energy interface to CS Bluetooth dongles.
  *
  * This is a client library that handles finding, connecting to, and interacting with
- * Control Solutions CS1814 dongles that support the proprietary 'Controller' BLE service.
- *
+ * Control Solutions BLE dongles that support the proprietary 'Controller' BLE service.
+ * 
+ * It is designed to be used as the 'device' when instantiating a @csllc/cs-modbus Modbus master.
+ * 
+ * This handles peripheral discovery and connecting/disconnecting from the 
+ * 
+ * See README.md for more information, including usage and events emitted by this module.
+ * 
  * @ignore
  */
 'use strict';
 
-// The noble library throws an exception if there is no compatible bluetooth adapter found.
-// this is a workaround as suggested by https://github.com/sandeepmistry/noble/issues/570
-var ble;
-try { 
-  ble = require('noble'); 
-} 
-catch(err) 
-{ 
-  ble = { 
-    on: (function() {})
-  };
-}
 
-var Controller = require( './lib/Controller');
+// Native Bluetooth module
+// 
+// For applications that strictly run on NodeJS (./examples, cs-modbus-cli, etc.) on
+// macOS and Linux, this module will fall back onto @abandonware/noble to provide native
+// BLE functionality.
+// 
+// For applications that run in environments that provide a real navigator.bluetooth
+// interface (namely, Electron), we can use that instead. This allows apps like Zhivago
+// to use a computer's built-in BLE adapter on Windows 10.
+// 
+// The interface is selected in BleController.constructor() below.
+const Bluetooth = require('webbluetooth').Bluetooth;
 
 // built-in node utility module
-var util = require('util');
+const util = require('util');
 
 // Node event emitter module
-var EventEmitter = require('events').EventEmitter;
+const EventEmitter = require('events').EventEmitter;
 
-// For the private CSLLC controller service
-var uuidControllerService = '6765ed1f4de149e14771a14380c90000';
-
+// Library containing implementations of Modbus functions and device-specific
+// (CS1814, CS1816, etc.) parameters
+const BleDevice = require('./lib/BleDevice');
 
 //------------------------------------//---------------------------------------
 
-function BleControllerFactory() {
+module.exports = class BleController extends EventEmitter {
 
-  var factory = this;
+  constructor(options) {
+    super();
 
-  // subclass to event emitter
-  EventEmitter.call( this );
+    // BLE availability
+    this.available = false;
 
-  // Pass on BLE state change events (noble library events passed
-  // through to our event listeners)
+    // BLE ready (peripheral selected and server open)
+    this.isReady = false;
+    
+    // Reference to connected peripheral and server
+    this.peripheral = null;
+    this.server = null;
 
-  ble.on('stateChange', this.emit.bind(factory, 'stateChange'));
-  ble.on('scanStart', this.emit.bind(factory, 'scanStart'));
-  ble.on('scanStop', this.emit.bind(factory, 'scanStop'));
-  ble.on('discover', this.emit.bind(factory, 'discover'));
-  ble.on('warning', this.emit.bind(factory, 'warning'));
+    // Reference to the dongle device
+    this.device = null;
 
-  // API to start the bluetooth scanning
-  this.startScanning = function() {
+    // Discovered peripheral list
+    this.discoveredPeripherals = [];
 
-    // Scan for devices with the service we care about
-    // This does not connect; just emits a discover event
-    // when one is detected 
-    ble.startScanning([uuidControllerService], false);
+    // Save options passed to constructor
+    this.options = options || {};
+
+    // Establish peripheral scanning criteria
+    if (this.options.bluetooth) {
+      this.bluetooth = bluetooth;
+    } else {
+      this.bluetooth = new Bluetooth({ deviceFound: this._onDiscover.bind(this) });
+    }
+
+    // The application should know what kind of dongle it's looking for.
+    // A UUID, name, or both must be provided in the options.
+    // Throw an error if neither are present.
+    if (!this.options.uuid && !this.options.name) {
+      // The error message must be composed separately from Error instantiation
+      let errorMessage = `A name and/or private service UUID must be provided. Known device names in cs-mb-ble are ${BleDevice.names()}`;
+      throw new Error(errorMessage);
+    }
+
+    if (!this.options.uuid || this.options.uuid == 'default') {
+      this.scannedUuids = BleDevice.uuids();
+    } else {
+      this.scannedUuids = this.options.uuid;
+    }
+
+    this.scannedName = this.options.name || null;
+
+    // Set up event forwarding from native Bluetooth module
+    this.bluetooth.on('availabilitychanged', this.emit.bind(this, 'availabilitychanged'));
+
+    // The application must now invoke scanning and peripheral selection
+  }
+
+
+  /** 
+   * Start the bluetooth scanning and find the requested peripheral using the filter parameters
+   * supplied to the constructor.
+   *
+   * @return {Promise}  Resolves when the callback passed in the `discover` event is called 
+   *                    with a device ID.
+   */
+  startScanning() {
+    // Start scanning by requesting a peripheral with the criteria established in our constructor
+    // This does not connect; just emits a discover event when one is detected 
+
+    // Build filter array
+    let filter = {};
+
+    if (this.scannedUuids) {
+      filter['services'] = this.scannedUuids;
+    }
+
+    if (this.scannedName) {
+      filter['name'] = this.scannedName;
+    }
+
+    // Emit noble-compatible event
+    this.emit('scanStart', filter);
+
+    // Start scanning
+    return this.bluetooth.requestDevice({ filters: [ filter ] })
+    .then((peripheral) => {
+      // Peripheral found and selected (either by us or application)
+      this.emit('scanStop', peripheral);
+
+      // Save reference to the peripheral
+      this.peripheral = peripheral;
+
+      return this.peripheral;
+    });
 
   };
 
-  this.stopScanning = function() {
-    ble.stopScanning();
-  };
 
-  // returns true if there is a bluetooth adapter installed.  Probably
-  // a better way is to assume not until the 'stateChange' event is emitted,
-  // but this is an easy way to see if the noble library threw an exception
-  // on startup.
-  this.installed = function() {
-    return 'function' === typeof( ble.startScanning );
-  };
+  /**
+   * Returns a `Promise` that resolves to a `Boolean` and sets the `available` property 
+   * depending on whether BLE is available on the system.
+   * 
+   */
+  getAvailability() {
+    return new Promise((resolve, reject) => {
 
-  // Make constructor available in the exported object
-  factory.Controller = Controller;
+      this.bluetooth.getAvailability()
+      .then((isAvailable) => {
+        this.available = isAvailable;
+
+        if (this.available) {
+          resolve();
+        } else {
+          reject();
+        }
+      });
+
+    });
+  }
 
 
+  /**
+   * Called by the Bluetooth interface when a peripheral is discovered.
+   * 
+   * This is only used when we instantiate our own Bluetooth object through NodeJS.
+   * If it's provided to us in our constructor (e.g., Electron's
+   * navigator.bluetooth object), a 'select-bluetooth-device' event will be
+   * fired in the main process instead, and the app will be expected to handle
+   * that on its own.
+   * 
+   * Either way, until the callback function is called, the Promise returned by
+   * this.startScanning() will not settle.
+   * 
+   * @param {BluetoothDevice} newPeripheral  Newly discovered BLE peripheral
+   * @param {Function}        callback       Callback function used to select a device
+   * @return {None}
+   */
+  _onDiscover(newPeripheral, callback) {
+
+    let discovered = this.discoveredPeripherals.some(peripheral => {
+      return (peripheral.id == newPeripheral.id);
+    });
+
+    if (discovered) {
+      return;
+    }
+
+    let peripheralEntry = {id: newPeripheral.id, name: newPeripheral.name, callback: callback};
+
+    this.discoveredPeripherals.push(peripheralEntry);
+
+    this.emit('discover', peripheralEntry);
+
+    if (this.options.autoConnect) {
+      callback();
+    } else {
+      return;
+    }
+  }
+
+
+  /**
+   * Open the peripheral that was requested in startScanning()
+   *
+   */
+  open() {
+    this.emit('connecting');
+
+    if (this.peripheral == null) {
+      return Promise.reject("No peripheral selected. startScanning() must be called, and the calling application must use the callback to select a peripheral.");
+    }
+    
+    return this.peripheral.gatt.connect()
+    .then((server) => {
+      this.emit('connected');
+
+      // Save a reference to the GATTServer
+      this.server = server;
+
+      return;
+    })
+    .then(() => {
+      // Set up server disconnect event forwarding
+      this.peripheral.on('gattserverdisconnected', this.emit.bind(this, 'gattserverdisconnected'));
+    })
+    .then(() => {
+      this.device = new BleDevice(this.peripheral, this.server);
+
+      // Set up event forwarding from BleDevice instance
+      let eventNames = [ 'inspecting',
+                         'inspected',
+                         'write',
+                         'data',
+                         'fault',
+                         'writeCharacteristic',
+                         'sendCommand',
+                         'watch',
+                         'superWatch',
+                         'unwatch',
+                         'unwatchAll',
+                       ];
+
+      eventNames.forEach((name) => {
+        this.device.on(name, this.emit.bind(this, name));
+      });
+
+      return this.device.inspect();
+    })
+    .then(() => {
+      this.emit('ready');
+
+      this.isReady = true;
+    });
+  }
+
+
+  /** 
+   * Close the open connection to a peripheral
+   */
+  close() {
+    this.emit('disconnecting');
+
+    if (this.server == null) {
+      this.peripheral = null;
+      this.server = null;
+      this.device = null;
+      this.master = null;
+
+      return Promise.reject("Already disconnected");
+    }
+
+    this.peripheral.gatt.disconnect();
+    this.emit('disconnected');
+
+    this.isReady = false;
+
+    this.device = null;
+    this.server = null;
+    this.peripheral = null;
+    this.master = null;
+
+    return Promise.resolve();
+  }
+  
+
+  // The following functions are simply passed through to the BleDevice instance
+
+
+  /**
+   * Return an object containing peripheral identity information obtained by this.inspect().
+   *
+   * @return {Promise} Resolves with object containing device information
+   */
+  getInfo() {
+    if (this.device) {
+      return this.device.getInfo();
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
+
+  /**
+   * Sets the peripheral's configuration via Modbus command, if supported
+   * Not fully implemented as of time of writing.
+   *
+   * @param {Object}   configuration  Peripheral configuration (TBD)
+   * @return {Promise} Resolves when the command is complete
+   */
+  configure(configuration) {
+    if (this.device) {
+      return this.device.configure(configuration);
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
+
+  /**
+   * Set the keyswitch signal of the peripheral via Modbus command, if supported
+   *
+   * @param {Boolean}  state  New keyswitch state, true = on, false = off
+   * @return {Promise} Resolves when the command is complete
+   */
+  keyswitch(state) {
+    if (this.device) {
+      return this.device.keyswitch(state);
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
+
+  /**
+   * Sets a watcher on the peripheral via Modbus command, if supported.
+   * This associates a 'status' characteristic of the controller service with a
+   * memory location on the device connected to the peripheral.
+   *
+   * @param {Number}    slot     Watcher slot
+   * @param {Number}    id       Device ID
+   * @param {Number}    address  Device memory address to read
+   * @param {Number}    length   Device memory read length
+   * @param {Function}  cb       Callback function
+   * @return {Promise} Resolves when the command is complete
+   */
+  watch(slot, id, address, length, cb) {
+    if (this.device) {
+      return this.device.watch(slot, id, address, length, cb);
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
+
+  /**
+   * Sets the super-watcher on the peripheral via Modbus command, if supported.
+   * This associates a 'superWatcher' characteristic of the controller service with
+   * one or more single-byte memory locations on the device connected to the peripheral.
+   *
+   * @param {Number}           id       Device ID
+   * @param {Array<Number>}    address  Array of device memory addresses to read
+   * @param {Function}         cb       Callback function
+   * @return {Promise} Resolves when the command is complete
+   */
+  superWatch(id, addresses, cb) {
+    if (this.device) {
+      return this.device.superWatch(id, addresses, cb);
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
+
+  /**
+   * Clears a watcher on the peripheral via Modbus command, if supported.
+   *
+   * @param {Number}    slot     Watcher slot
+   * @return {Promise} Resolves when the command is complete
+   */
+  unwatch(slot) {
+    if (this.device) {
+      return this.device.unwatch(slot);
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
+
+  /**
+   * Clears all watchers on the peripheral via Modbus command, if supported.
+   * 
+   * @return {Promise} Resolves when the command is complete
+   */
+  unwatchAll() {
+    if (this.device) {
+      return this.device.unwatchAll();
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
+
+  /**
+   * Gets all watchers currently configured on the peripheral via Modbus command, if supported.
+   * Results are compiled into an array of objects.
+   * 
+   * @return {Promise} Resolves into an array of objects, each member corresponding to an 
+   *                   active watcher
+   */
+  getWatchers() {
+    if (this.device) {
+      return this.device.getWatchers();
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
+  /**
+   * Gets all active members of the peripheral's super-watcher via Modbus command, if supported.
+   * Results are compiled into an array of objects.
+   *
+   * @return {Promise} Resolves into an array of object, each member corresponding to an active
+   *                   super-watcher member.
+   */
+  getSuperWatcher() {
+    if (this.device) {
+      return this.device.getSuperWatcher();
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
+
+  /**
+   * Returns whether the connection is open for Modbus use
+   *
+   * @return {Boolean} True if open, false otherwise
+   */
+  isOpen() {
+    return this.peripheral && this.device && this.isReady;
+  }
+
+
+  /**
+   * Write data to the peripheral's transparent UART, i.e., to the Modbus interface. 
+   *
+   * @param {Buffer}  data  Data to be written
+   * @return {promise} Resolves when the write is finished.
+   */
+  write(data) {
+    if (this.device) {
+      return this.device.write(data);
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
 
 }
 
-// This object can emit events.  Note, the inherits
-// call needs to be before .prototype. additions for some reason
-util.inherits( BleControllerFactory, EventEmitter );
-
-
-//BleControllerFactory.prototype.stateChange = function()
-
-/**
- * Public interface to this module
- *
- * The object constructor is available to our client
- *
- * @ignore
- */
-module.exports = BleControllerFactory;

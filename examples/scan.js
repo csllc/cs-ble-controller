@@ -1,31 +1,34 @@
 /**
- * Scan for controllers and print a list
+ * Scan for controllers and print a list of discovered devices.
  *
  */
 'use strict';
 
-var BleControllerFactory = require('..');
-var ble = new BleControllerFactory();
+// Our BLE library
+const BleController = require('..');
+
+// Create BLE instance
+let ble = new BleController({
+  uuid: 'default', // Scan for the private CSLLC controller service
+  autoConnect: false, // Wait for application to select device; just keep scanning
+});
 
 
-// Wait for the bluetooth hardware to become ready
-ble.once('stateChange', function(state) {
+ble.getAvailability()
+.then(() => {
+  ble.on('discover', (newDevice) => {
+    console.log("Discovered BLE device:", newDevice);
+  });
 
-  if(state === 'poweredOff') {
-    console.error( 'Bluetooth must be turned on before you run this example');
+  ble.on('scanStart', (filter) => {
+    console.log("Scanning started using filter", filter);
+  });
 
-  }
-  else if(state === 'poweredOn') {
+  ble.on('scanStop', (peripheral) => {
+    console.log("Scanning stopped", peripheral);
+  });
 
-
-    ble.on('discover', function( peripheral ) {
-
-      console.log( 'Found ' + peripheral.advertisement.localName );
-
-    });
-
-    ble.startScanning();
-
-  }
+  return ble.startScanning();
 
 });
+

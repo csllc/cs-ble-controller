@@ -5,115 +5,86 @@
 
 'use strict';
 
-// Load the object that handles communication to the device
-var BleControllerFactory = require('..');
-var ble = new BleControllerFactory();
+// Load the class that handles communication to the device
+const BleController = require('..');
 
 var expect = require('chai').expect;
 
-/**
- * Pre-test
- *
- * Runs once, before all tests in this block.
- * Calling the done() callback tells mocha to proceed with tests
- *
- */
-before(function( done ) {
+var ble = null;
+var foundPeripheral = null;
 
-  // allow time for scan and connect
-  this.timeout(20000);
-
-  // Wait for the bluetooth hardware to become ready
-	ble.once('stateChange', function(state) {
-
-    if(state === 'poweredOff') {
-      done( new Error( 'Bluetooth must be powered on before you run this test')) ;
-
-    }
-    else if(state === 'poweredOn') {
-      done();
-    }
-
-  });
-
-});
-
-after(function( done ) {
-  // runs after all tests in this block
-  done();
-});
-
-beforeEach(function( done ) {
-  // runs before each test in this block
-  done();
-});
-
-afterEach(function( done ) {
-  // runs after each test in this block
-  done();
-});
-
-describe('Scan for devices', function() {
-
-  // time to find a device depends on, for example, the advertising intervals
-  this.timeout(20000);
-
-  it('should find a device', function(done) {
-
-    // time to find a device depends on, for example, the advertising intervals
-    this.timeout = 10000;
-
-    console.log( 'Searching for BLE device...');
-            
-    ble.once('discover', function( peripheral ) {
-      ble.stopScanning();
-
-      expect( peripheral ).to.be.an('object');
-      expect( peripheral.advertisement ).to.be.an('object');
-      expect( peripheral.advertisement.localName ).to.be.a('string');
-
-      done();
-
+describe('BLE Peripheral Connection', function() {
+  before('Create BleController instance', function(done) {
+    ble = new BleController({
+      uuid: 'default',
+      autoConnect: true,
     });
 
-    ble.startScanning();
+    expect(ble).to.be.an('object');
+
+    done();
+  });
+
+  after('Disconnect from peripheral', function(done) {
+    ble.close()
+    .then(() => {
+      done();
+    });
+  });
+
+  describe('Scan for peripheral', function() {
+    // time to find a device depends on, for example, the advertising intervals
+    this.timeout(20000);
+
+    it('should find a BLE peripheral', function(done) {
+      // Wait for the bluetooth hardware to become ready
+      ble.getAvailability()
+      .then(() => {
+
+        // after we power on, start scanning for devices
+        ble.startScanning()
+        .then((peripheral) => {
+          // then wait for a matching device to be discovered
+
+          foundPeripheral = peripheral;
+
+          // got one, we are done. Save the discovered peripheral for
+          // use in the test(s)
+          done();
+        });
+
+      })
+      .catch(() => {
+        done( new Error( 'Bluetooth must be enabled and turned on before this test can be run')) ;
+      });
+    });
 
   });
 
-  it('should connect to a device', function(done) {
+  describe('Connect and read identity', function() {
 
-
-    ble.once('discover', function( peripheral ) {
-      ble.stopScanning();
-
-      var device = new ble.Controller( peripheral );
-
-      device.connect()
-      .then( function() {
-
-        expect( device.deviceType ).to.not.equal( null );
-        expect( device.deviceType ).to.be.a( 'string' );
-        expect( device.deviceType ).to.have.length.above( 0 );
-
-        expect( device.serial ).to.not.equal( null );
-        expect( device.serial ).to.be.a( 'string' );
-        expect( device.serial ).to.have.length.above( 0 );
-
-        expect( device.fault ).to.not.equal( null );
-        expect( device.fault ).to.be.an.instanceof( Buffer );
-        expect( device.fault ).to.have.length.above(0);
-
+    it('should connect to the peripheral', function(done) {
+      ble.open(foundPeripheral)
+      .then(() => {
         done();
-      })
-      .catch( function( err ) { 
-        done( err ); 
       });
     });
 
 
-    ble.startScanning();
+    it('should read peripheral identity', function(done) {
+      ble.getInfo()
+      .then((info) => {
+
+        expect(info.manufacturerName).to.equal('Control Solutions LLC');
+        expect(info.modelNumber.startsWith("CS")).to.be.true;
+        expect(info.modbusId).to.be.a('number');
+
+        done();
+      });
+    });
 
   });
+
 
 });
 

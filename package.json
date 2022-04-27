@@ -1,6 +1,6 @@
 {
   "name": "@csllc/cs-mb-ble",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,11 +9,14 @@
   "author": "Bill Glase <bglase@controls.com> (http://wwww.controls.com/)",
   "license": "MIT",
   "dependencies": {
-    "noble": "^1.8.0",
-    "underscore": "^1.8.3"
+    "@csllc/cs-modbus": "^3.1.0",
+    "underscore": "^1.8.3",
+    "webbluetooth": "^2.1.0"
   },
   "devDependencies": {
+    "async-promise-pool": "^1.0.6",
     "chai": "^3.5.0",
+    "chalk": "^4.1.2",
     "mocha": "^3.1.0",
     "sinon": "^1.17.7"
   }
