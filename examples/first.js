@@ -4,58 +4,68 @@
  */
 'use strict';
 
-var BleControllerFactory = require('..');
-var ble = new BleControllerFactory();
+// Our BLE library
+const BleController = require('..');
 
-
-// Wait for the bluetooth hardware to become ready
-ble.once('stateChange', function(state) {
-
-  if(state === 'poweredOff') {
-    console.error( 'Bluetooth must be turned on before you run this example');
-
-  }
-  else if(state === 'poweredOn') {
-
-
-    ble.on('discover', function( peripheral ) {
-
-      // stop after the first found
-      ble.stopScanning();
-
-      // Create an object to manage the discovered peripheral
-      var device = new ble.Controller( peripheral );
-
-      console.log( 'Found ' + peripheral.advertisement.localName );
-
-      device.connect()
-      .then( function() { 
-        console.log( 'Connected to ' + device.deviceType );
-        console.log( 'Serial: ' + device.serial );
-        console.log( 'Fault: ' + device.fault );
-
-        // finished; exit program
-        process.exit(0);
-      })
-      
-      .catch( function( err ) { 
-        console.error( 'Error:', err ); 
-      });
-    });
-
-    // Capture the event that is emitted when bluetooth goes into scanning mode
-    ble.on('scanStart', function(){
-      console.log( 'Scanning...');
-    });
-
-    // Capture the event emitted when scan mode ends
-    ble.on('scanStop', function(){
-      console.log( 'Stopped Scanning...');
-    });
-
-    // Put the bluetooth hardware into scan mode
-    ble.startScanning();
-
-  }
-
+// Create BLE instance
+let ble = new BleController({
+  uuid: 'default', // Scan for the private CSLLC controller service
+  autoConnect: true, // Use first device found
 });
+
+ble.getAvailability()
+.then(() => {
+  console.log("BLE interface is available on this platform");
+
+  ble.on('discover', (newDevice) => {
+    console.log("Discovered BLE device:", newDevice);
+  });
+
+  ble.on('scanStart', (filter) => {
+    console.log("Scanning started using filter", filter);
+  });
+
+  ble.on('scanStop', () => {
+    console.log("Scanning stopped");
+  });
+
+  ble.on('inspecting', () => {
+    console.log("Inspecting BLE dongle...");
+  });
+
+  ble.on('inspected', () => {
+    console.log("Inspection complete.");
+  });
+
+  ble.startScanning()
+  .then((device) => {
+    return ble.open(device)
+    .then(() => {
+      return ble.getInfo()
+      .then((info) => {
+        console.log("Device information:");
+        console.log("  System ID:             ", info.systemId);
+        console.log("  Manufacturer:          ", info.manufacturerName);
+        console.log("  Model Number:          ", info.modelNumber);
+        console.log("  Serial Number:         ", info.dongleSerialNumber);
+        console.log("  Software Revision:     ", info.softwareRevision);
+        console.log("  Firmware Revision:     ", info.firmwareRevision);
+        console.log("  Hardware Revision:     ", info.hardwareRevision);
+        console.log("  Dongle Modbus ID:      ", info.modbusId);
+        console.log("  Product:               ", info.product);
+        console.log("  Product Serial Number: ", info.serial);
+      });
+    })
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error("Error opening device", error);
+    });
+
+  })
+  .catch(() => {
+    console.error("BLE interface is not available on this platform");
+  })
+});
+
