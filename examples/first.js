@@ -39,7 +39,7 @@ ble.getAvailability()
 
   ble.startScanning()
   .then((device) => {
-    return ble.open(device)
+    return ble.open()
     .then(() => {
       return ble.getInfo()
       .then((info) => {

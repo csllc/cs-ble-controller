@@ -157,7 +157,7 @@ ble.getAvailability()
   // Start scanning for devices and connect automatically
   ble.startScanning()
   .then((device) => {
-    return ble.open(device)
+    return ble.open()
     .catch((error) => {
       console.error("Error opening device", error);
     });

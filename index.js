@@ -26,7 +26,11 @@
 // to use a computer's built-in BLE adapter on Windows 10.
 // 
 // The interface is selected in BleController.constructor() below.
-const Bluetooth = require('webbluetooth').Bluetooth;
+try {
+  const Bluetooth = require('webbluetooth').Bluetooth;
+} catch(e) {
+  const Bluetooth = null;
+}
 
 // built-in node utility module
 const util = require('util');
@@ -66,7 +70,7 @@ module.exports = class BleController extends EventEmitter {
 
     // Establish peripheral scanning criteria
     if (this.options.bluetooth) {
-      this.bluetooth = bluetooth;
+      this.bluetooth = this.options.bluetooth;
     } else {
       this.bluetooth = new Bluetooth({ deviceFound: this._onDiscover.bind(this) });
     }
@@ -80,18 +84,17 @@ module.exports = class BleController extends EventEmitter {
       throw new Error(errorMessage);
     }
 
-    if (!this.options.uuid || this.options.uuid == 'default') {
-      this.scannedUuids = BleDevice.uuids();
-    } else {
-      this.scannedUuids = this.options.uuid;
-    }
-
     this.scannedName = this.options.name || null;
 
     // Set up event forwarding from native Bluetooth module
-    this.bluetooth.on('availabilitychanged', this.emit.bind(this, 'availabilitychanged'));
+    this.bluetooth.addEventListener('availabilitychanged', this.emit.bind(this, 'availabilitychanged'));
 
-    // The application must now invoke scanning and peripheral selection
+    // Electron doesn't seem to support the workflow of
+    // bluetooth.requestDevice() -> emit 'discover' -> user selects via picker yet,
+    // so we allow the open() method to be called with a device ID that was previously
+    // discovered. Re-scanning is necessary to get a reference to the device.
+    //
+    // Otherwise, the application must now invoke scanning and peripheral selection.
   }
 
 
@@ -109,10 +112,6 @@ module.exports = class BleController extends EventEmitter {
     // Build filter array
     let filter = {};
 
-    if (this.scannedUuids) {
-      filter['services'] = this.scannedUuids;
-    }
-
     if (this.scannedName) {
       filter['name'] = this.scannedName;
     }
@@ -121,7 +120,10 @@ module.exports = class BleController extends EventEmitter {
     this.emit('scanStart', filter);
 
     // Start scanning
-    return this.bluetooth.requestDevice({ filters: [ filter ] })
+    let options = { filters: [ filter ],
+                    optionalServices: BleDevice.serviceUuids(this.scannedName) }
+
+    return this.bluetooth.requestDevice(options)
     .then((peripheral) => {
       // Peripheral found and selected (either by us or application)
       this.emit('scanStop', peripheral);
@@ -202,54 +204,74 @@ module.exports = class BleController extends EventEmitter {
    * Open the peripheral that was requested in startScanning()
    *
    */
-  open() {
-    this.emit('connecting');
+  open(id) {
+    if (id) {
+      // If we were provided a device ID, repeat the scanning process, attempt to
+      // find the same device that was previously found, and connect to it.
+      // We call ourselves recursively to accomplish this.
+      if (typeof(id) == 'string') {
+        return this.getAvailability()
+        .then(() => {
+          return this.startScanning()
+          .then((device) => {
+            if (device.id == id) {
+              return this.open();
+            } else {
+              return Promise.reject("Could not find requested device");
+            }
+          });
+        });
+      } else {
+        return Promise.reject('Invalid device ID. Expected a string.');
+      }
+    } else {
+      this.emit('connecting');
 
-    if (this.peripheral == null) {
-      return Promise.reject("No peripheral selected. startScanning() must be called, and the calling application must use the callback to select a peripheral.");
-    }
-    
-    return this.peripheral.gatt.connect()
-    .then((server) => {
-      this.emit('connected');
+      if (this.peripheral == null) {
+        return Promise.reject("No peripheral selected. startScanning() must be called, and the calling application must use the callback to select a peripheral.");
+      }
 
-      // Save a reference to the GATTServer
-      this.server = server;
+      return this.peripheral.gatt.connect()
+      .then((server) => {
+        this.emit('connected');
 
-      return;
-    })
-    .then(() => {
-      // Set up server disconnect event forwarding
-      this.peripheral.on('gattserverdisconnected', this.emit.bind(this, 'gattserverdisconnected'));
-    })
-    .then(() => {
-      this.device = new BleDevice(this.peripheral, this.server);
+        // Save a reference to the GATTServer
+        this.server = server;
+      })
+      .then(() => {
+        // Set up server disconnect event forwarding
+        this.peripheral.addEventListener('gattserverdisconnected', this.emit.bind(this, 'gattserverdisconnected'));
+      })
+      .then(() => {
+        this.device = new BleDevice(this.peripheral, this.server);
 
-      // Set up event forwarding from BleDevice instance
-      let eventNames = [ 'inspecting',
-                         'inspected',
-                         'write',
-                         'data',
-                         'fault',
-                         'writeCharacteristic',
-                         'sendCommand',
-                         'watch',
-                         'superWatch',
-                         'unwatch',
-                         'unwatchAll',
-                       ];
+        // Set up event forwarding from BleDevice instance
+        let eventNames = [ 'inspecting',
+                           'inspected',
+                           'write',
+                           'data',
+                           'fault',
+                           'writeCharacteristic',
+                           'sendCommand',
+                           'watch',
+                           'superWatch',
+                           'unwatch',
+                           'unwatchAll',
+                         ];
 
-      eventNames.forEach((name) => {
-        this.device.on(name, this.emit.bind(this, name));
+        eventNames.forEach((name) => {
+          this.device.on(name, this.emit.bind(this, name));
+        });
+
+        return this.device.inspect();
+      })
+      .then(() => {
+        this.emit('ready');
+
+        this.isReady = true;
       });
 
-      return this.device.inspect();
-    })
-    .then(() => {
-      this.emit('ready');
-
-      this.isReady = true;
-    });
+    }
   }
 
 
