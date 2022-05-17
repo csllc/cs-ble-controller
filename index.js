@@ -257,6 +257,8 @@ module.exports = class BleController extends EventEmitter {
                            'superWatch',
                            'unwatch',
                            'unwatchAll',
+                           'discoveredService',
+                           'discoveredCharacteristic',
                          ];
 
         eventNames.forEach((name) => {

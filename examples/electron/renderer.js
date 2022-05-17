@@ -77,6 +77,14 @@ let testBluetooth = function() {
     });
   });
 
+  ble.on('discoveredService', (uuid) => {
+    console.log("Discovered", uuid);
+  });
+
+  ble.on('discoveredCharacteristic', (serviceUuid, charUuid) => {
+    console.log("Discovered", serviceUuid, "/", charUuid);
+  });
+
   console.log("ble", ble);
 
   return new Promise((resolve, reject) => {

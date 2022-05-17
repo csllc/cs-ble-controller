@@ -157,6 +157,12 @@ The maximum delay to process a command varies by the type of peripheral; consult
 
 The peripheral accepts at least two commands at a time, which are processed in order.  Sending more than two commands without waiting for a response may result in the extra commands being silently ignored by the peripheral.
 
+### Device information service
+
+Certain characteristics may not be readable when this module is incorporated into an Electron app due to a GATT blocklist. Affected characteristics listed in the device files in `lib/device/` are marked as `optional` and any errors relating to them during inspection are ignored.
+
+See the blocklist here: https://github.com/WebBluetoothCG/registries/blob/master/gatt_blocklist.txt
+
 
 ## Development
 
