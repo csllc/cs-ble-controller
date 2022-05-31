@@ -26,10 +26,12 @@
 // to use a computer's built-in BLE adapter on Windows 10.
 // 
 // The interface is selected in BleController.constructor() below.
+let Bluetooth;
+
 try {
-  const Bluetooth = require('webbluetooth').Bluetooth;
+  Bluetooth = require('webbluetooth').Bluetooth;
 } catch(e) {
-  const Bluetooth = null;
+  Bluetooth = null;
 }
 
 // built-in node utility module
