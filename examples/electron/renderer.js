@@ -3,6 +3,8 @@
 const { ipcRenderer } = require('electron');
 const CsMbBle = require('../..');
 
+const PromisePool = require('async-promise-pool');
+
 ipcRenderer.on('bleSetup', () => {
   console.log("bleSetup()");
 
@@ -74,7 +76,93 @@ let testBluetooth = function() {
       console.log("  Dongle Modbus ID:      ", info.modbusId);
       console.log("  Product:               ", info.product);
       console.log("  Product Serial Number: ", info.serial);
-    });
+    })
+    .then(() => {
+      // Set up watchers
+
+      let pool = new PromisePool({concurrency: 1});
+
+      let handleError = function(e, index) {
+        console.error("Watcher error", e, index);
+      }
+
+      let deviceId = 0x01;
+
+      pool.add(() => {
+        // Watcher for HRAM 0x10, 0x11, 0x12
+        return ble.watch(0, deviceId, 0x110, 3, (data) => {
+          console.log("watcher 0:", data);
+        })
+        .catch((e) => handleError(e, 0));
+      });
+
+      pool.add(() => {
+        // Watcher for HRAM 0x13, 0x14, 0x15
+        return ble.watch(1, deviceId, 0x113, 3, (data) => {
+          console.log("watcher 1:", data);
+        })
+        .catch((e) => handleError(e, 1));
+      });
+
+      pool.add(() => {
+        // Watcher for HRAM 0x18, 0x19
+        return ble.watch(2, deviceId, 0x118, 2, (data) => {
+          console.log("watcher 2:", data);
+        })
+        .catch((e) => handleError(e, 2));
+      });
+
+      pool.add(() => {
+        // Watcher for HRAM 0x1C, 0x1D
+        return ble.watch(3, deviceId, 0x11C, 2, (data) => {
+          console.log("watcher 3:", data);
+        })
+        .catch((e) => handleError(e, 3));
+      });
+
+      pool.add(() => {
+        // Watcher for HRAM 0x1E, 0x1F
+        return ble.watch(4, deviceId, 0x11E, 2, (data) => {
+          console.log("watcher 4:", data);
+        })
+        .catch((e) => handleError(e, 4));
+      });
+
+      pool.add(() => {
+        // Watcher for HRAM 0x29, 0x2A, 0x2B
+        return ble.watch(5, deviceId, 0x129, 3, (data) => {
+          console.log("watcher 5:", data);
+        })
+        .catch((e) => handleError(e, 5));
+      });
+
+      pool.add(() => {
+        // Watcher for LRAM 0x56
+        return ble.watch(6, deviceId, 0x056, 1, (data) => {
+          console.log("watcher 6:", data);
+        })
+        .catch((e) => handleError(e, 6));
+      });
+
+      pool.add(() => {
+        // Watcher for LRAM 0x5F, 0x60, 0x61
+        return ble.watch(7, deviceId, 0x05F, 3, (data) => {
+          console.log("watcher 7:", data);
+        })
+        .catch((e) => handleError(e, 7));
+      });
+
+      pool.add(() => {
+        // Watcher for LRAM 0x6A, 0x6B
+        return ble.watch(8, deviceId, 0x06A, 2, (data) => {
+          console.log("watcher 8:", data);
+        })
+        .catch((e) => handleError(e, 8));
+      });
+
+      return pool.all();
+
+    })
   });
 
   ble.on('discoveredService', (uuid) => {
