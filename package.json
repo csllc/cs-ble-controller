@@ -1,6 +1,6 @@
 {
   "name": "@csllc/cs-mb-ble",
-  "version": "2.0.1-alpha.1",
+  "version": "2.1.0",
   "description": "",
   "repository": "https://github.com/csllc/cs-mb-ble",
   "main": "index.js",
