@@ -4,12 +4,15 @@
  */
 'use strict';
 
+// Increase Node's event listener limit - we know what we're doing
+require('events').EventEmitter.prototype._maxListeners = 50;
+
 // Our BLE library
 const BleController = require('..');
 
 // Create BLE instance
 let ble = new BleController({
-  uuid: 'default', // Scan for the private CSLLC controller service
+  name: 'CS1816',
   autoConnect: true, // Use first device found
 });
 

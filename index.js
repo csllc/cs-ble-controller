@@ -14,7 +14,6 @@
  */
 'use strict';
 
-
 // Native Bluetooth module
 // 
 // For applications that strictly run on NodeJS (./examples, cs-modbus-cli, etc.) on
@@ -27,15 +26,15 @@
 // 
 // The interface is selected in BleController.constructor() below.
 let Bluetooth;
+let usingNodeModule;
 
 try {
   Bluetooth = require('webbluetooth').Bluetooth;
+  usingNodeModule = true;
 } catch(e) {
   Bluetooth = null;
-  console.log("e", e);
+  usingNodeModule = false;
 }
-
-console.log("Bluetooth", Bluetooth);
 
 // built-in node utility module
 const util = require('util');
@@ -248,7 +247,8 @@ module.exports = class BleController extends EventEmitter {
         this.peripheral.addEventListener('gattserverdisconnected', this.emit.bind(this, 'gattserverdisconnected'));
       })
       .then(() => {
-        this.device = new BleDevice(this.peripheral, this.server);
+        this.device = new BleDevice(this.peripheral, this.server,
+                                    { usingNodeModule: usingNodeModule });
 
         // Set up event forwarding from BleDevice instance
         let eventNames = [ 'inspecting',

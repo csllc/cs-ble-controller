@@ -6,6 +6,10 @@
 // that this demo uses @csllc/cs-mb-ble, which uses webbluetooth instead of
 // @abandonware/noble directly.
 
+// Increase Node's event listener limit - we know what we're doing
+import EventEmitter from 'node:events';
+EventEmitter.prototype._maxListeners = 50;
+
 // CS Modbus library
 import * as Modbus from '@csllc/cs-modbus';
 
