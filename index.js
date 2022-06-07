@@ -32,7 +32,10 @@ try {
   Bluetooth = require('webbluetooth').Bluetooth;
 } catch(e) {
   Bluetooth = null;
+  console.log("e", e);
 }
+
+console.log("Bluetooth", Bluetooth);
 
 // built-in node utility module
 const util = require('util');
