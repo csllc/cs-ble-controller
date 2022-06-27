@@ -181,15 +181,45 @@ let testBluetooth = function() {
       ble.startScanning()
       .then((device) => {
         console.log("device", device);
-        resolve({
-          text: `${device.name} (${device.id})`, // TODO: Truncate ID
-          value: device.id,
-          type: "ble",
-          typeText: "Bluetooth Dongle",
-          module: "cs-mb-ble",
-          bus: device,
-          port: `${device.name} (ID ${device.id})`,
-        });
+
+
+
+        let handleAdvertisement = (event) => {
+
+          console.log("handleAdvertisement", event);
+
+          // device.removeEventListener('advertisementreceived', handleAdvertisement);
+
+          // Using 0xFFFF for Company ID for now, but that may change if
+          // CS registers for their own.
+          let manufacturerData = event.manufacturerData.get(0xFFFF);
+
+          console.log("manufacturerData", manufacturerData);
+
+          resolve({
+            text: `${device.name} (${device.id})`, // TODO: Truncate ID
+            value: device.id,
+            type: "ble",
+            typeText: prettyModuleName('ble'),
+            module: "cs-mb-ble",
+            bus: device,
+            port: `${device.name} (ID ${device.id})`,
+          });
+        };
+
+        device.addEventListener('advertisementreceived', handleAdvertisement);
+
+        device.watchAdvertisements();
+
+        // resolve({
+        //   text: `${device.name} (${device.id})`, // TODO: Truncate ID
+        //   value: device.id,
+        //   type: "ble",
+        //   typeText: "Bluetooth Dongle",
+        //   module: "cs-mb-ble",
+        //   bus: device,
+        //   port: `${device.name} (ID ${device.id})`,
+        // });
       });
     });
   })

@@ -76,7 +76,10 @@ module.exports = class BleController extends EventEmitter {
     if (this.options.bluetooth) {
       this.bluetooth = this.options.bluetooth;
     } else {
-      this.bluetooth = new Bluetooth({ deviceFound: this._onDiscover.bind(this) });
+      this.bluetooth = new Bluetooth({ deviceFound: this._onDiscover.bind(this),
+                                       // See "Web Bluetooth compatibility" section of README
+                                       // allowedManufacturerData: [{ companyIdentifier: 0xFFFF }]
+                                     });
     }
 
     // The application should know what kind of dongle it's looking for.
@@ -120,12 +123,18 @@ module.exports = class BleController extends EventEmitter {
       filter['name'] = this.scannedName;
     }
 
+    // See "Web Bluetooth compatibility" section of README
+    // filter['manufacturerData'] = [{ companyIdentifier: 0xFFFF }];
+
     // Emit noble-compatible event
     this.emit('scanStart', filter);
 
     // Start scanning
     let options = { filters: [ filter ],
-                    optionalServices: BleDevice.serviceUuids(this.scannedName) }
+                    optionalServices: BleDevice.serviceUuids(this.scannedName),
+                    // See "Web Bluetooth compatibility" section of README
+                    // optionalManufacturerData: [{ companyIdentifier: 0xFFFF }],
+                  };
 
     return this.bluetooth.requestDevice(options)
     .then((peripheral) => {

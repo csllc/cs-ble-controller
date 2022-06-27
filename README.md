@@ -31,6 +31,14 @@ See the files in the `examples` directory for working examples of how to use thi
 
 A `navigator.bluetooth` object (e.g., provided by Electron) can be passed as an option for the constructor. If this is done, this module will not create its own `webbluetooth` instance.
 
+Web Bluetooth is a new and unstable standard. A few things to note about the state of Web Bluetooth in Chrome/Electron as of June 2022:
+
+- Electron doesn't support the device selection workflow that Chrome uses involving a device selection prompt presented to the user after calling `bluetooth.requestDevice()`, nor does it seem to follow the specification's proposal to emit a `discover` event Electron's main process. This is worked around in this module's `BleController.constructor()`.
+- Despite the CS1816 dongle reporting controller product ID and serial number in its advertisement and scan data in firmware version 1.6+, Electron applications cannot access it to display this information prior to connecting for various reasons. They must read this from the respective characteristics instead. This appears to be due to a few different reasons:
+  - Despite specifying the correct manufacturer data company ID value when requesting a device, the `manufacturerData` member of the `BluetoothAdvertisingEvent` remains empty when advertisements are received on both macOS and Windows 10.
+  - On macOS 11+, this may be due to Chrome/Electron failing to obtain permissions from the operating system. See https://bugs.chromium.org/p/chromium/issues/detail?id=1155557
+  - On Windows 10, manufacturer data in the advertisement is empty, and device scans do not execute under typical circumstances. See https://bugs.chromium.org/p/chromium/issues/detail?id=1137504
+
 ### Watchers
 
 Watchers are characteristics (`statusN`) that are associated with a specific memory location on the connected device, e.g., the motor controller.
