@@ -71,5 +71,40 @@ module.exports = class Controller {
     });
   }
 
+  // Write to device memory and verify using the MODBUS verified write memory
+  // function code
+  // returns a Promise that resolves when the write is complete
+  writeMemoryVerify(address, data, options) {
+
+    let me = this;
+
+    return new Promise(function(resolve, reject) {
+
+      options = options || {};
+
+      options.onComplete = function(err, response) {
+        if (response && response.exceptionCode) {
+          // i'm not sure how to catch exception responses from the
+          // slave in a better way than this
+          err = new Error('Exception ' + response.exceptionCode);
+        }
+        if (err) {
+          reject(err);
+        } else {
+          if (response.status === 0) {
+            resolve();
+          } else {
+            reject('Error writing to device ');
+          }
+        }
+      };
+
+      options.unit = me.id;
+
+      me.master.writeMemoryVerify(address, data, options);
+
+    });
+  }
+
 
 }

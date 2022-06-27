@@ -200,6 +200,22 @@ function memoryTest() {
   });
 
   pool.add(() => {
+    // Write fault log to 0xFF
+    return controller.writeMemoryVerify(0x0370, Buffer.alloc(4, 0xFF))
+    .then(() => {
+      console.log(label("Wrote EEPROM 0x70-0x74 = 0xFF"));
+    });
+  });
+
+  pool.add(() => {
+    // Write fault log to 0x00
+    return controller.writeMemoryVerify(0x0370, Buffer.alloc(4, 0x00))
+    .then(() => {
+      console.log(label("Wrote EEPROM 0x70-0x74 = 0x00"));
+    });
+  });
+
+  pool.add(() => {
     return controller.writeMemory(0x0300, Buffer.from([0]))
     .then(() => {
       console.log(label("Wrote EEPROM address 0x00 again"));
