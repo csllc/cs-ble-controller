@@ -10,7 +10,7 @@
   "author": "Bill Glase <bglase@controls.com> (http://wwww.controls.com/)",
   "license": "MIT",
   "dependencies": {
-    "@csllc/cs-modbus": "^3.1.0",
+    "@csllc/cs-modbus": "^3.2.0",
     "promise-retry": "^2.0.1",
     "underscore": "^1.8.3",
     "webbluetooth": "^2.1.0"
