@@ -182,7 +182,7 @@ let testBluetooth = function() {
       .then((device) => {
         console.log("device", device);
 
-
+        
 
         let handleAdvertisement = (event) => {
 
@@ -200,7 +200,7 @@ let testBluetooth = function() {
             text: `${device.name} (${device.id})`, // TODO: Truncate ID
             value: device.id,
             type: "ble",
-            typeText: prettyModuleName('ble'),
+            typeText: 'ble',
             module: "cs-mb-ble",
             bus: device,
             port: `${device.name} (ID ${device.id})`,
