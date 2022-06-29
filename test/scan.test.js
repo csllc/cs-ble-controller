@@ -16,7 +16,7 @@ var foundPeripheral = null;
 describe('BLE Peripheral Connection', function() {
   before('Create BleController instance', function(done) {
     ble = new BleController({
-      uuid: 'default',
+      name: 'CS1816',
       autoConnect: true,
     });
 
@@ -29,6 +29,11 @@ describe('BLE Peripheral Connection', function() {
     ble.close()
     .then(() => {
       done();
+    })
+    .finally(() => {
+      // Kludge so we actually exit the Node process due to bug in underlying Noble:
+      // https://github.com/abandonware/noble/issues/248
+      process.exit(0);
     });
   });
 
@@ -40,9 +45,8 @@ describe('BLE Peripheral Connection', function() {
       // Wait for the bluetooth hardware to become ready
       ble.getAvailability()
       .then(() => {
-
         // after we power on, start scanning for devices
-        ble.startScanning()
+        return ble.startScanning()
         .then((peripheral) => {
           // then wait for a matching device to be discovered
 
@@ -56,35 +60,38 @@ describe('BLE Peripheral Connection', function() {
       })
       .catch(() => {
         done( new Error( 'Bluetooth must be enabled and turned on before this test can be run')) ;
+      })
+      .finally(() => {
+
       });
+
     });
 
-  });
+    describe('Connect and read identity', function() {
 
-  describe('Connect and read identity', function() {
-
-    it('should connect to the peripheral', function(done) {
-      ble.open(foundPeripheral)
-      .then(() => {
-        done();
+      it('should connect to the peripheral', function(done) {
+        ble.open()
+        .then(() => {
+          done();
+        });
       });
-    });
 
 
-    it('should read peripheral identity', function(done) {
-      ble.getInfo()
-      .then((info) => {
+      it('should read peripheral identity', function(done) {
+        ble.getInfo()
+        .then((info) => {
 
-        expect(info.manufacturerName).to.equal('Control Solutions LLC');
-        expect(info.modelNumber.startsWith("CS")).to.be.true;
-        expect(info.modbusId).to.be.a('number');
+          expect(info.manufacturerName).to.equal('Control Solutions LLC');
+          expect(info.modelNumber.startsWith("CS")).to.be.true;
+          expect(info.modbusId).to.be.a('number');
 
-        done();
+          done();
+        });
       });
+
     });
 
   });
 
 
 });
-

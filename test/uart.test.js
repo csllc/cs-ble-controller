@@ -19,7 +19,7 @@ var foundPeripheral = null;
 describe('Transparent UART and MBAP communication', function() {
   before('Create BleController instance', function(done) {
     ble = new BleController({
-      uuid: 'default',
+      name: 'CS1816',
       autoConnect: true,
     });
 
@@ -40,6 +40,11 @@ describe('Transparent UART and MBAP communication', function() {
     ble.close()
     .then(() => {
       done();
+    })
+    .finally(() => {
+      // Kludge so we actually exit the Node process due to bug in underlying Noble:
+      // https://github.com/abandonware/noble/issues/248
+      process.exit(0);
     });
   });
 
@@ -53,7 +58,7 @@ describe('Transparent UART and MBAP communication', function() {
       .then(() => {
 
         // after we power on, start scanning for devices
-        ble.startScanning()
+        return ble.startScanning()
         .then((peripheral) => {
           // then wait for a matching device to be discovered
 
@@ -66,13 +71,13 @@ describe('Transparent UART and MBAP communication', function() {
 
       })
       .catch(() => {
-        done( new Error( 'Bluetooth must be enabled and turned on before this test can be run')) ;
+        done(err);
       });
     });
 
 
     it('should connect to the peripheral', function(done) {
-      ble.open(foundPeripheral)
+      ble.open()
       .then(() => {
         done();
       });

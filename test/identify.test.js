@@ -15,7 +15,7 @@ var ble = null;
 describe('BLE Peripheral Scanning', function() {
   before(function(done) {
     ble = new BleController({
-      uuid: 'default',
+      name: 'CS1816',
       autoConnect: true,
     });
 
@@ -24,6 +24,17 @@ describe('BLE Peripheral Scanning', function() {
     done();
   });
 
+  after('Disconnect from peripheral', function(done) {
+    ble.close()
+    .then(() => {
+      done();
+    })
+    .finally(() => {
+      // Kludge so we actually exit the Node process due to bug in underlying Noble:
+      // https://github.com/abandonware/noble/issues/248
+      process.exit(0);
+    });
+  });
 
   describe('Scan for a device', function() {
 
@@ -33,28 +44,33 @@ describe('BLE Peripheral Scanning', function() {
 
       // Wait for the bluetooth hardware to become ready
       ble.getAvailability()
-      .then((available) => {
+      .then(() => {
 
         // after we power on, start scanning for devices
-        ble.startScanning()
+        return ble.startScanning()
         .then((peripheral) => {
           // then wait for a matching device to be discovered
-
           expect(peripheral).to.be.an('object');
           expect(peripheral.id).to.be.a('string');
           expect(peripheral.gatt).to.be.an('object');
           expect(peripheral.adData).to.be.an('object');
 
-          // got one, we are done. Save the discovered peripheral for
-          // use in the test(s)
+        })
+        .then(() => {
+          expect(ble.isReady).to.be.false;
           done();
+        })
+        .catch((err) => {
+          done(err);
         });
 
       })
-      .catch(() => {
-        done( new Error( 'Bluetooth must be enabled and turned on before you run this test')) ;
+      .catch((err) => {
+        done(err);
       });
+
     });
+
 
   });
 
