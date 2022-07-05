@@ -31,7 +31,7 @@ const CONTROLLER_ID = 0x01;
 
 // Create BLE instance
 let ble = new BleController({
-  name: 'CS1816',
+  uuid: 'default',
   autoConnect: true, // Use first device found
 });
 
@@ -200,7 +200,7 @@ function memoryTest() {
   });
 
   pool.add(() => {
-    // Write fault log to 0xFF
+    // Write Phoenix fault log to 0xFF
     return controller.writeMemoryVerify(0x0370, Buffer.alloc(4, 0xFF))
     .then(() => {
       console.log(label("Wrote EEPROM 0x70-0x74 = 0xFF"));
@@ -208,7 +208,7 @@ function memoryTest() {
   });
 
   pool.add(() => {
-    // Write fault log to 0x00
+    // Write Phoenix fault log to 0x00
     return controller.writeMemoryVerify(0x0370, Buffer.alloc(4, 0x00))
     .then(() => {
       console.log(label("Wrote EEPROM 0x70-0x74 = 0x00"));

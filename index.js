@@ -49,7 +49,7 @@ const BleDevice = require('./lib/BleDevice');
 // UUIDs of services common across all of our BLE peripheral devices if we're not using
 // a known device name.
 const serviceUuids = [
-  '180a', // Device Information
+  '0000180a-0000-1000-8000-00805f9b34fb', // Device Information
   '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Transparent UART
 ];
   
@@ -92,18 +92,26 @@ module.exports = class BleController extends EventEmitter {
     }
 
     // The application should know what kind of dongle it's looking for.
-    // A name must be provided in the options.
-    // Throw an error if one isn't present.
+    // A name or service UUID must be provided in the options.
+    // A service UUID of 'default' will cause the default CSLLC Private Service
+    // UUID to be used, which should be common across all CSLLC BLE devices.
+    // Throw an error if one of these options isn't present.
     //
-    // See notes in this.startScanning() for why we're not accepting a UUID to search for
-    // in lieu of a name.
-    if (!this.options.name) {
+    // See notes in this.startScanning() for why we're not accepting a UUID to
+    // search for in lieu of a name.
+    if (!this.options.name && !this.options.uuid) {
       // The error message must be composed separately from Error instantiation
-      let errorMessage = `A device name be provided. Known device names in cs-mb-ble are ${BleDevice.names()}`;
+      let errorMessage = `A device name and/or private service UUID be provided. Known device names in cs-mb-ble are ${BleDevice.names()}`;
       throw new Error(errorMessage);
     }
 
-    this.scannedName = this.options.name;
+    this.scannedName = this.options.name || null;
+
+    if (this.options.uuid == 'default') {
+      this.scannedUuid = BleDevice.uuids();
+    } else {
+      this.scannedUuid = [ this.options.uuid ];
+    }
 
     // Set up event forwarding from native Bluetooth module
     this.bluetooth.addEventListener('availabilitychanged', this.emit.bind(this, 'availabilitychanged'));
@@ -131,33 +139,31 @@ module.exports = class BleController extends EventEmitter {
     // Build filter array
     let filters = [];
 
-    // See "Web Bluetooth compatibility" section of README
-    // filters.push({ manufacturerData: [{ companyIdentifier: 0xFFFF }] });
-
     if (this.scannedName) {
       filters.push({ name: this.scannedName });
     }
 
-    // Previously a { services: ... } object was also pushed to filters[] with the CS private
-    // controller service UUID.
-    //
-    // This did not work consistently across Web Bluetooth implementations and has been
-    // removed for the time being.
-    //
-    // Currently the only criteria for device scanning is its name; we'll know pretty quickly
-    // if it's the right device when we inspect its services. 
+    if (this.scannedUuid) {
+      filters.push({ services: this.scannedUuid });
+    }
+
+    // See "Web Bluetooth compatibility" section of README
+    // filters.push({ manufacturerData: [{ companyIdentifier: 0xFFFF }] });
 
     // Build list of services we want
     let services;
 
-    if (this.scannedName) {
+    if (this.scannedUuid) {
+      services = this.scannedUuid;
+    } else if (this.scannedName) {
       services = BleDevice.serviceUuids(this.scannedName);
     } else {
       // Add private CS service UUID
       services = BleDevice.uuids();
-      // Add non-private services to service list
-      services = services.concat(serviceUuids);
     }
+
+    // Add non-private services to service list without adding duplicates
+    services = [...new Set(services.concat(serviceUuids))];
 
     // Emit noble-compatible event
     this.emit('scanStart', filters);

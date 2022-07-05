@@ -16,7 +16,7 @@ var foundPeripheral = null;
 describe('BLE Peripheral Connection', function() {
   before('Create BleController instance', function(done) {
     ble = new BleController({
-      name: 'CS1816',
+      uuid: 'default',
       autoConnect: true,
     });
 

@@ -17,7 +17,7 @@ let testBluetooth = function() {
   console.log("testBluetooth");
 
   let ble = new CsMbBle({ bluetooth: navigator.bluetooth,
-                          name: 'CS1816' });
+                          uuid: 'default' });
 
 
   ble.on('availabilitychanged', (event) => {

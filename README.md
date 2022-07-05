@@ -9,7 +9,7 @@ To extend this module's compatibility to include Electron GUI apps, the dependen
 - Events forwarded from the native BLE module have changed. See Events Emitted, below.
 - The `startScanning()` method now handles device selection in addition to scanning
 - The `startScanning()` method returns a `Promise` that waits for a callback to be called. This callback is sent in a `discover` event emitted by the `webbluetooth` instance. The `Promise` will resolve to a `BluetoothDevivce`, which is also stored as `this.peripheral`.
-- The `name` option passed to the constructor must be set.
+- The `name` or `uuid` options passed to the constructor must be set. `default` is an acceptable UUID.
 - The `stopScanning()` method has been removed
 - The `warning` event from Noble is no longer emitted
 - New BLE devices must have corresponding files added to the `lib/device/` directory, and `lib/BleDevice.js` must be updated to import and use them in the appropriate places.
@@ -22,7 +22,8 @@ See the files in the `examples` directory for working examples of how to use thi
 
 ### Constructor options
 
-- `name` - (required) Device name to use in peripheral scan filter.
+- `uuid` - (required) GATT service UUID to use in peripheral scan filter. `'default'` can be used to specify the CSLLC Private Controller service.
+- `name` - (optional) Device name to use in peripheral scan filter.
 - `bluetooth` - (optional) Instance of `navigator.bluetooth` to use instead of creating our own instance of `webbluetooth.Bluetooth`.
 - `autoConnect` - (optional) Automatically connect to the first device found while scanning. *Default value: false*
 

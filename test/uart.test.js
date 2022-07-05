@@ -20,6 +20,7 @@ describe('Transparent UART and MBAP communication', function() {
   before('Create BleController instance', function(done) {
     ble = new BleController({
       name: 'CS1816',
+      uuid: '6765ed1f-4de1-49e1-4771-a14380c90000',
       autoConnect: true,
     });
 
