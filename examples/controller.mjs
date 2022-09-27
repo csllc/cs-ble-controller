@@ -116,9 +116,10 @@ ble.getAvailability()
     console.log(label("Ready."));
 
     ble.configure({})
-    .then(() => ble.keyswitch(true))
+    // .then(() => ble.keyswitch(true))
     .then(() => memoryTest())
     .then(() => setWatchers());
+    // .then(() => testPseudoEE());
 
   });
 
@@ -225,6 +226,24 @@ function memoryTest() {
   return pool.all();
 }
 
+function testPseudoEE() {
+  // Create test buffer
+  let bufferTest = Buffer.from([...Array(128).keys()]);
+
+  return ble.writeObject(0, bufferTest)
+  .then(() => {
+    ble.readObject(0)
+    .then((buffer) => {
+      console.log("Read back:", buffer);
+    });
+  });
+
+  // return ble.readObject(0)
+  // .then((buffer) => {
+  //   console.log("Read back:", buffer);
+  // });
+}
+
 function setWatchers() {
   return ble.unwatchAll()
   .then(() => {
@@ -238,58 +257,58 @@ function setWatchers() {
     });
   })
   .then(() => {
-    return ble.watch(2, CONTROLLER_ID, 0x0064, 2, (value) => {
-      console.log(label('Battery voltage:'), value);
+    return ble.watch(2, CONTROLLER_ID, 0x0110, 1, (value) => {
+      console.log(label('Supply voltage:'), value);
     });
   })
   .then(() => {
-    return ble.watch(3, CONTROLLER_ID, 0x002E, 2, (value) => {
+    return ble.watch(3, CONTROLLER_ID, 0x0113, 1, (value) => {
       console.log(label('PWM:'), value);
     });
   })
   .then(() => {
-    return ble.watch(4, CONTROLLER_ID, 0x065, 2, (value) => {
-      console.log(label('0x0065 (4):'), value);
+    return ble.watch(4, CONTROLLER_ID, 0x111, 1, (value) => {
+      console.log(label('Board Temperature:'), value);
     });
   })
   .then(() => {
-    return ble.watch(5, CONTROLLER_ID, 0x002E, 2, (value) => {
-      console.log(label('0x002E (5):'), value);
+    return ble.watch(5, CONTROLLER_ID, 0x112, 1, (value) => {
+      console.log(label('Output Current:'), value);
     });
   })
   .then(() => {
-    return ble.watch(6, CONTROLLER_ID, 0x002E, 2, (value) => {
-      console.log(label('0x002E (6):'), value);
+    return ble.watch(6, CONTROLLER_ID, 0x0114, 1, (value) => {
+      console.log(label('Scaled Throttle:'), value);
     });
   })
   .then(() => {
-    return ble.watch(7, CONTROLLER_ID, 0x002E, 2, (value) => {
-      console.log(label('0x002E (7):'), value);
+    return ble.watch(7, CONTROLLER_ID, 0x118, 1, (value) => {
+      console.log(label('System State:'), value);
     });
   })
   .then(() => {
-    return ble.watch(8, CONTROLLER_ID, 0x002E, 2, (value) => {
-      console.log(label('0x002E (8):'), value);
+    return ble.watch(8, CONTROLLER_ID, 0x0119, 1, (value) => {
+      console.log(label('Motor State:'), value);
     });
   })
   .then(() => {
-    return ble.watch(9, CONTROLLER_ID, 0x0065, 2, (value) => {
-      console.log(label('0x0065 (9):'), value);
+    return ble.watch(9, CONTROLLER_ID, 0x0060, 2, (value) => {
+      console.log(label('Analog Throttle:'), value);
     });
   })
-  .then(() => {
-    return ble.unwatch(9);
-  })
-  .then(() => {
-    return ble.unwatch(4);
-  })
+  // .then(() => {
+  //   return ble.unwatch(9);
+  // })
+  // .then(() => {
+  //   return ble.unwatch(4);
+  // })
   .then(() => {
     // Add superwatcher - up to 25 addresses
-    let superWatcherMembers = [0x0005, 0x0006, 0x0007, 0x0008, 0x0009,
-                               0x000A, 0x000B, 0x000C, 0x000D, 0x000E,
-                               0x000F, 0x0010, 0x0011, 0x0012, 0x0013,
-                               0x0014, 0x0015, 0x0016, 0x0017, 0x0018,
-                               0x0019, 0x001A, 0x001B, 0x001C, 0x001D];
+    let superWatcherMembers = [0x0001, 0x0002, 0x0003, 0x0004, 0x0005,
+                               0x0006, 0x0007, 0x0008, 0x0009, 0x000A,
+                               0x000B, 0x000C, 0x000D, 0x000E, 0x000F,
+                               0x0010, 0x0011, 0x0012, 0x0013, 0x0014,
+                               0x0015, 0x0016, 0x0017, 0x0018, 0x0019];
 
     return ble.superWatch(CONTROLLER_ID, superWatcherMembers, (value) => {
       console.log(label('SuperWatcher: '), value);

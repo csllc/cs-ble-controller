@@ -507,6 +507,23 @@ module.exports = class BleController extends EventEmitter {
   }
 
 
+  readObject(objectId, options) {
+    if (this.device) {
+      return this.device.readObject(objectId, options);
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
+  writeObject(objectId, data, options) {
+    if (this.device) {
+      return this.device.writeObject(objectId, data, options);
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
+
   /**
    * Returns whether the connection is open for Modbus use
    *
