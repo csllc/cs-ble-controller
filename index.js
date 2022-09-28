@@ -109,7 +109,7 @@ module.exports = class BleController extends EventEmitter {
 
     if (this.options.uuid == 'default') {
       this.scannedUuid = BleDevice.uuids();
-    } else {
+    } else if (this.options.uuid) {
       this.scannedUuid = [ this.options.uuid ];
     }
 
@@ -207,7 +207,6 @@ module.exports = class BleController extends EventEmitter {
           reject();
         }
       });
-
     });
   }
 
