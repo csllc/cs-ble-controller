@@ -233,9 +233,12 @@ function testPseudoEE() {
   return ble.writeObject(0, bufferTest)
   .then(() => {
     ble.readObject(0)
-    .then((buffer) => {
-      console.log("Read back:", buffer);
+    .then((response) => {
+      console.log("Read back:", response.values);
     });
+  })
+  .catch((e) => {
+    console.error(e);
   });
 
   // return ble.readObject(0)
