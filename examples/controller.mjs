@@ -117,9 +117,9 @@ ble.getAvailability()
 
     ble.configure({})
     // .then(() => ble.keyswitch(true))
+    .then(() => testPseudoEE())
     .then(() => memoryTest())
-    .then(() => setWatchers());
-    // .then(() => testPseudoEE());
+    .then(() => setWatchers())
 
   });
 
@@ -234,17 +234,13 @@ function testPseudoEE() {
   .then(() => {
     ble.readObject(0)
     .then((response) => {
-      console.log("Read back:", response.values);
+      console.log(label("Read back:"), response.values);
     });
   })
   .catch((e) => {
     console.error(e);
   });
 
-  // return ble.readObject(0)
-  // .then((buffer) => {
-  //   console.log("Read back:", buffer);
-  // });
 }
 
 function setWatchers() {
