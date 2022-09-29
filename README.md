@@ -18,7 +18,7 @@ To extend this module's compatibility to include Electron GUI apps, the dependen
 
 ## Usage
 
-See the files in the `examples` directory for working examples of how to use this module.
+See the files in the `examples` directory for working examples of how to use this module. When working on a Linux-based system (Raspberry Pi, for example) it may be necessary to run the example scripts as root.
 
 ### Constructor options
 
