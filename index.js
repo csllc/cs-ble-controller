@@ -490,11 +490,26 @@ module.exports = class BleController extends EventEmitter {
     }
   }
 
+
+  /**
+   * Reads a watcher's value, if supported.
+   *
+   * @param {Number}   slot   Watcher slot
+   * @return {Promise} Resolves when the command is complete with watcher value
+   */
+  readWatcher(slot) {
+    if (this.device) {
+      return this.device.readWatcher(slot);
+    } else {
+      return Promise.reject("No BLE peripheral");
+    }
+  }
+
   /**
    * Gets all active members of the peripheral's super-watcher via Modbus command, if supported.
    * Results are compiled into an array of objects.
    *
-   * @return {Promise} Resolves into an array of object, each member corresponding to an active
+   * @return {Promise} Resolves into an array of objects, each member corresponding to an active
    *                   super-watcher member.
    */
   getSuperWatcher() {
