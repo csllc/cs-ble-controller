@@ -58,6 +58,7 @@ let controller = new Controller({
   id: CONTROLLER_ID,
 });
 
+let dongleSoftwareRevision = 0;
 
 ble.getAvailability()
 .then(() => {
@@ -90,6 +91,8 @@ ble.getAvailability()
 
     ble.getInfo()
     .then((info) => {
+      dongleSoftwareRevision = parseFloat(info.softwareRevision);
+
       console.log(label("Device information:"));
       console.log("  System ID:             ", info.systemId);
       console.log("  Manufacturer:          ", info.manufacturerName);
@@ -117,6 +120,7 @@ ble.getAvailability()
 
     ble.configure({})
     // .then(() => ble.keyswitch(true))
+    // .then(() => { if (dongleSoftwareRevision >= 1.10) { return reset(); } })
     .then(() => testPseudoEE())
     .then(() => memoryTest())
     .then(() => setWatchers())
@@ -332,6 +336,10 @@ function setWatchers() {
     return ble.unwatch(0xFF);
   })
 
+}
+
+function reset() {
+  return controller.reset();
 }
 
 // Prints a nicely formatted Buffer of data
