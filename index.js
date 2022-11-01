@@ -490,16 +490,40 @@ module.exports = class BleController extends EventEmitter {
     }
   }
 
-
   /**
    * Reads a watcher's value, if supported.
    *
    * @param {Number}   slot   Watcher slot
-   * @return {Promise} Resolves when the command is complete with watcher value
+   * @return {Promise} Resolves when the command is complete with the watcher's
+   *                   value (WebBluetooth) or immediately with no value (noble)
+   *
+   * When this module is used without a provided Bluetooth object, e.g., *not*
+   * in an Electron project, the Promise returned by the underlying
+   * characteristic.readValue() method doesn't appear to ever resolve with a value;
+   * it hangs indefinitely. However, the read does complete and the value is
+   * sent asynchronously as a notification (assuming the characteristic is set up
+   * for reading and notifications).
+   *
+   * This is not true for use cases where a Bluetooth object is provided; the
+   * "real" WebBluetooth does return a Promise that resolves with the expected
+   * value when the read completes.
    */
   readWatcher(slot) {
     if (this.device) {
-      return this.device.readWatcher(slot);
+      if (this.options.bluetooth) {
+        // A "real" WebBluetooth instance is used - readWatcher's returned Promise
+        // resolves when the read is complete.
+        return this.device.readWatcher(slot);
+      } else {
+        // We use our own instance via the 'webbluetooth' Node module - just blindly
+        // resolve it because the Promise returned by readWatcher() never seems
+        // to resolve.
+        //
+        // The watcher's value will be sent as a notification in response to this
+        // function call.
+        this.device.readWatcher(slot);
+        return Promise.resolve();
+      }
     } else {
       return Promise.reject("No BLE peripheral");
     }

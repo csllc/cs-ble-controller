@@ -163,6 +163,23 @@ let testBluetooth = function() {
       return pool.all();
 
     })
+    .then(() => {
+      let pool = new PromisePool({concurrency: 1});
+
+      for (let i = 0; i < 9; i ++) {
+        pool.add(() => {
+          return ble.readWatcher(i)
+          .catch((err) => {
+            console.error("error reading watcher " + i, err);
+          })
+        });
+      }
+
+      return pool.all();
+    })
+    .then((results) => {
+      console.log("readWatcher results", results);
+    });
   });
 
   ble.on('discoveredService', (uuid) => {

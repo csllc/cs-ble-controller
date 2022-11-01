@@ -299,12 +299,22 @@ function setWatchers() {
       console.log(label('Analog Throttle:'), value);
     });
   })
+
+  .then(() => {
+    // See note in the declarion of ble.readWatcher() (in index.js) for why we're
+    // ignoring the Promise that it returns.
+    for (let i = 0; i < 9; i ++) {
+      ble.readWatcher(i);
+    }
+  })
+
   // .then(() => {
   //   return ble.unwatch(9);
   // })
   // .then(() => {
   //   return ble.unwatch(4);
   // })
+
   .then(() => {
     // Add superwatcher - up to 25 addresses
     let superWatcherMembers = [0x0001, 0x0002, 0x0003, 0x0004, 0x0005,
