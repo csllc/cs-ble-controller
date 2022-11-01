@@ -75,6 +75,7 @@ Some dongles also support a 'super-watcher', which is comprised of several singl
 - `unwatchAll()` - Clears all watchers and super-watcher.
 - `getWatchers()` - Returns a `Promise` that resolves to an array of objects, each corresponding to an active watcher.
 - `getSuperWatcher()` - Returns a `Promise` that resolves to an array of objects, each corresponding to an active member of the super-watcher.
+- `readWatcher(slot)` - Reads the specified watcher's value. Returns either a `Promise` that resolves immediately with no value (when `bluetooth` *is not* provided to the constructor) or a `Promise` that resolves with the watcher's value (when `bluetooth` *is* provided to the constructor). In both cases the watcher's value will be sent as a normal update via the watcher's callback. Detailed notes on this can be found in index.js. Requires CS1816 firmware 1.10+.
 
 ### Events emitted
 
