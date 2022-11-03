@@ -515,13 +515,17 @@ module.exports = class BleController extends EventEmitter {
         // resolves when the read is complete.
         return this.device.readWatcher(slot);
       } else {
-        // We use our own instance via the 'webbluetooth' Node module - just blindly
-        // resolve it because the Promise returned by readWatcher() never seems
-        // to resolve.
+        // Here we use our own instance via the 'webbluetooth' Node module - just
+        // blindly resolve it because the Promise returned by readWatcher() never
+        // seems to resolve.
         //
         // The watcher's value will be sent as a notification in response to this
         // function call.
-        this.device.readWatcher(slot);
+        this.device.readWatcher(slot)
+        .catch((e) => {
+          console.error(e);
+        });
+
         return Promise.resolve();
       }
     } else {

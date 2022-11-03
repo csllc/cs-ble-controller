@@ -58,7 +58,7 @@ let controller = new Controller({
   id: CONTROLLER_ID,
 });
 
-let dongleSoftwareRevision = 0;
+let dongleSoftwareRevision;
 
 ble.getAvailability()
 .then(() => {
@@ -91,14 +91,14 @@ ble.getAvailability()
 
     ble.getInfo()
     .then((info) => {
-      dongleSoftwareRevision = parseFloat(info.softwareRevision);
+      dongleSoftwareRevision = info.softwareRevision;
 
       console.log(label("Device information:"));
       console.log("  System ID:             ", info.systemId);
       console.log("  Manufacturer:          ", info.manufacturerName);
       console.log("  Model Number:          ", info.modelNumber);
       console.log("  Serial Number:         ", info.dongleSerialNumber);
-      console.log("  Software Revision:     ", info.softwareRevision);
+      console.log("  Software Revision:     ", info.softwareRevision.string);
       console.log("  Firmware Revision:     ", info.firmwareRevision);
       console.log("  Hardware Revision:     ", info.hardwareRevision);
       console.log("  Dongle Modbus ID:      ", info.modbusId);
@@ -120,7 +120,11 @@ ble.getAvailability()
 
     ble.configure({})
     // .then(() => ble.keyswitch(true))
-    // .then(() => { if (dongleSoftwareRevision >= 1.10) { return reset(); } })
+    // .then(() => {
+    //   if (dongleSoftwareRevision.scalar >= stringToSemVer("1.10.0").scalar) {
+    //     return reset();
+    //   }
+    // })
     .then(() => testPseudoEE())
     .then(() => memoryTest())
     .then(() => setWatchers())
@@ -304,7 +308,10 @@ function setWatchers() {
     // See note in the declarion of ble.readWatcher() (in index.js) for why we're
     // ignoring the Promise that it returns.
     for (let i = 0; i < 9; i ++) {
-      ble.readWatcher(i);
+      ble.readWatcher(i)
+      .catch((e) => {
+        console.error(e);
+      });
     }
   })
 
@@ -390,3 +397,24 @@ function zeroPad(number, length) {
   return (pad + number).slice(-pad.length);
 }
 
+
+// Helper function to convert a version string to various Semantic Versioning
+// data formats
+function stringToSemVer(versionString) {
+  let semVerRegex = /([0-9]{1,}).([0-9]{1,}).?([0-9]{1,})?/;
+  let matches = versionString.match(semVerRegex);
+
+  let bytes = { major: matches[1] ? parseInt(matches[1]) : 0,
+                minor: matches[2] ? parseInt(matches[2]) : 0,
+                patch: matches[3] ? parseInt(matches[3]) : 0 };
+
+  let string = `${bytes.major}.${bytes.minor}.${bytes.patch}`;
+
+  let scalar = bytes.patch + (bytes.minor << 8) + (bytes.major << 16);
+
+  return {
+    bytes: bytes,
+    string: string,
+    scalar: scalar,
+  };
+}
