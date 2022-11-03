@@ -43,7 +43,7 @@ Web Bluetooth is a new and unstable standard. A few things to note about the sta
 
 Watchers are characteristics (`statusN`) that are associated with a specific memory location on the connected device, e.g., the motor controller.
 
-Support for watchers varies by BLE dongle and firmware revision. Typically there are at least 5 watchers supporting read lengths of 0 to 4 contiguous bytes. When these memory locations change, the provided callback function is called with the new value of the memory.
+Support for watchers varies by BLE dongle and software revision. Typically there are at least 5 watchers supporting read lengths of 0 to 4 contiguous bytes. When these memory locations change, the provided callback function is called with the new value of the memory.
 
 Some dongles also support a 'super-watcher', which is comprised of several single-byte members. When any of the watched memory locations change, the provided callback function is called with the address of the changed memory and the new value.
 
