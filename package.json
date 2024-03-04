@@ -9,12 +9,12 @@
   "author": "Bill Glase <bglase@controls.com> (http://wwww.controls.com/)",
   "license": "MIT",
   "dependencies": {
-    "noble": "^1.8.0",
     "underscore": "^1.8.3"
   },
   "devDependencies": {
     "chai": "^3.5.0",
     "mocha": "^3.1.0",
+    "noble": "^1.8.0",
     "sinon": "^1.17.7"
   }
 }
